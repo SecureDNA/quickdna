@@ -1,0 +1,10 @@
+/target
+/.hypothesis
+/.vscode
+__pycache__/
+
+perf.data
+perf.data.old
+flamegraph.svg
+Cargo.lock
+poetry.lock
