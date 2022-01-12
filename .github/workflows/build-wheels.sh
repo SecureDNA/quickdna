@@ -1,7 +1,8 @@
 #!/bin/bash
-set -euxo pipefail
+set -euxo pipefail nullglob
 
-for PYBIN in /opt/python/cp3[6789]*/bin; do
+for PY in cp38-cp38 cp39-cp39 cp310-cp310; do
+    PYBIN="/opt/python/${PY}/bin"
     "${PYBIN}/pip" install maturin
     "${PYBIN}/maturin" build -i "${PYBIN}/python" --release
 done

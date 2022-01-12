@@ -20,3 +20,7 @@ hypothesis = "*"
 black = "*"
 maturin = "==0.9.4"
 biopython = "^1.79"
+
+[build-system]
+requires = ["maturin==0.9.4"]
+build-backend = "maturin"
