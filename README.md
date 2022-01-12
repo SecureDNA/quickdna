@@ -2,7 +2,9 @@
 
 [![PyPI](https://img.shields.io/pypi/v/quickdna?style=flat-square)](https://pypi.org/project/quickdna/)
 
-quickdna is a simple, fast library for working with DNA sequences.
+Quickdna is a simple, fast library for working with DNA sequences. It is up to 100x faster than Biopython for some
+translation tasks, in part because it uses a native Rust module (via PyO3) for the translation. However, it exposes
+an easy-to-use, statically typed API that should feel familiar for Biopython users.
 
 ```python
 # These are the two main library types. Unlike Biopython, DnaSequence and ProteinSequence are distinct,
@@ -16,7 +18,7 @@ quickdna is a simple, fast library for working with DNA sequences.
 >>> d.translate()
 ProteinSequence(seq='*SRLFNQ')
 
-# But any of the NCBI tables can be specified. A ValueError will be thrown for an invalid table.
+# ...but any of the NCBI tables can be specified. A ValueError will be thrown for an invalid table.
 >>> d.translate(table=22)
 ProteinSequence(seq='**RLFNQ')
 
@@ -33,6 +35,8 @@ ProteinSequence(seq='SR')
 DnaSequence(seq='TCTTGA')
 ```
 
+## Benchmarks
+
 For regular DNA translation tasks, quickdna is faster than Biopython. (See `benchmarks/bench.py` for source)
 
 task                                       | time             | comparison
@@ -46,3 +50,23 @@ reverse_complement_biopython(small_genome) | 0.00398ms / iter | 167.24%
 reverse_complement_quickdna(covid_genome)  | 0.02409ms / iter |
 reverse_complement_biopython(covid_genome) | 0.02928ms / iter | 121.55%
 
+## Installation
+
+Quickdna has prebuilt wheels for Linux (manylinux2010), OSX, and Windows available [on PyPi](https://pypi.org/project/quickdna/).
+
+## Development
+
+Quickdna uses `PyO3` and `maturin` to build and upload the wheels, and `poetry` for handling dependencies. This is handled via
+a `Justfile`, which requires [Just](https://github.com/casey/just), a command-runner similar to `make`.
+
+### Poetry
+
+You can install poetry from https://python-poetry.org, and it will handle the other python dependencies.
+
+### Just
+
+You can install `Just` with `cargo install just`, and then run it in the project directory to get a list of commands.
+
+### Flamegraphs
+
+The `just profile` command requires [cargo-flamegraph](https://github.com/flamegraph-rs/flamegraph), please see that repository for installation instructions.
