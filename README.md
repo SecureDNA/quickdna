@@ -1,5 +1,7 @@
 # quickdna
 
+[![PyPI](https://img.shields.io/pypi/v/quickdna?style=flat-square)](https://pypi.org/project/quickdna/)
+
 quickdna is a simple, fast library for working with DNA sequences.
 
 ```python
@@ -17,7 +19,7 @@ ProteinSequence(seq='SR')
 DnaSequence(seq='TCTTGA')
 ```
 
-quickdna is much faster than Biopython for regular DNA translation tasks.
+For regular DNA translation tasks, quickdna is faster than Biopython. (See `benchmarks/bench.py` for source)
 
 task                                       | time             | comparison
 -------------------------------------------|------------------|-----------
