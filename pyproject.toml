@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "quickdna"
-version = "0.1.0"
+version = "0.1.1"
 description = "Fast implementation of DNA translation in Rust"
 authors = ["Theia Vogel <theia@vgel.me>"]
 license = "MIT"
