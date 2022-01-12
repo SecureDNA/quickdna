@@ -81,7 +81,12 @@ jobs:
           MATURIN_PASSWORD: ${{ secrets.MATURIN_PASSWORD }}
         run: |
           pip install maturin
-          maturin upload -r https://test.pypi.org/legacy/ -u __token__ --skip-existing linux-wheels/* osx-wheels/* windows-wheels/*
+          maturin upload                     \
+            -u __token__                     \
+            --skip-existing                  \
+            linux-wheels/*                   \
+            windows-wheels/*                 \
+            osx-*-wheel/*
       - name: Set environment url
         id: set_url
         run: |
