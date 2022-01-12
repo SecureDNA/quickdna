@@ -1,9 +1,8 @@
 import typing as ty
 
-import _quickdna
+from .quickdna import _translate, _reverse_complement  # type: ignore
 
 T = ty.TypeVar("T", bound="BaseSequence")
-
 
 class BaseSequence:
     """Base class for DNA and Protein sequences."""
@@ -66,7 +65,7 @@ class DnaSequence(BaseSequence):
         NCBI table ID.
         """
 
-        seq = _quickdna.translate(table, self._seq)
+        seq = _translate(table, self._seq)
         return ProteinSequence(seq)
 
     def translate_all_frames(
@@ -86,7 +85,7 @@ class DnaSequence(BaseSequence):
     def reverse_complement(self) -> "DnaSequence":
         """Takes the reverse complement of a DNA sequence"""
 
-        seq = _quickdna.reverse_complement(self._seq)
+        seq = _reverse_complement(self._seq)
         return DnaSequence(seq)
 
 

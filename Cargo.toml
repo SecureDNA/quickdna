@@ -1,5 +1,5 @@
 [package]
-name = "_quickdna"
+name = "quickdna"
 version = "0.1.0"
 edition = "2021"
 authors = ["Theia Vogel <theia@vgel.me>"]
@@ -9,7 +9,7 @@ lazy_static = "1.4.0"
 thiserror = "1.0.30"
 
 [lib]
-name = "_quickdna"
+name = "quickdna"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies.pyo3]

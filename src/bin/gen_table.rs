@@ -4,7 +4,7 @@
 
 use std::fs;
 
-use _quickdna::trans_table::{CodonIdx, Nucleotide, TranslationTable};
+use quickdna::trans_table::{CodonIdx, Nucleotide, TranslationTable};
 
 const TABLE: &str = "
 ATT || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I

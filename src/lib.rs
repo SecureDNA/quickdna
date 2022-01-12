@@ -1,4 +1,5 @@
 #![feature(array_chunks)]
+#![allow(non_snake_case)]
 
 use pyo3::{exceptions::PyValueError, prelude::*, types::PyBytes};
 use trans_table::TranslationTable;
@@ -12,28 +13,28 @@ impl std::convert::From<trans_table::TranslationError> for PyErr {
 }
 
 #[pyfunction]
-fn check_table(table: u8) -> PyResult<()> {
+fn _check_table(table: u8) -> PyResult<()> {
     let _ = TranslationTable::try_from(table)?;
     Ok(())
 }
 
 #[pyfunction]
-fn translate(py: Python, table: u8, dna: &PyBytes) -> PyResult<PyObject> {
+fn _translate(py: Python, table: u8, dna: &PyBytes) -> PyResult<PyObject> {
     let bytes = trans_table::translate(table, dna.as_bytes())?;
     Ok(PyBytes::new(py, &bytes).into())
 }
 
 #[pyfunction]
-fn reverse_complement(py: Python, dna: &PyBytes) -> PyResult<PyObject> {
+fn _reverse_complement(py: Python, dna: &PyBytes) -> PyResult<PyObject> {
     let bytes = trans_table::reverse_complement(dna.as_bytes())?;
     Ok(PyBytes::new(py, &bytes).into())
 }
 
 #[pymodule]
-fn _quickdna(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(check_table, m)?)?;
-    m.add_function(wrap_pyfunction!(translate, m)?)?;
-    m.add_function(wrap_pyfunction!(reverse_complement, m)?)?;
+fn quickdna(_py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(_check_table, m)?)?;
+    m.add_function(wrap_pyfunction!(_translate, m)?)?;
+    m.add_function(wrap_pyfunction!(_reverse_complement, m)?)?;
 
     Ok(())
 }
