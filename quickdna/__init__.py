@@ -158,7 +158,7 @@ class DnaSequence(BaseSequence):
     def reverse_complement(self) -> "DnaSequence":
         """
         Takes the reverse complement of a DNA sequence.
-        
+
         Raises ValueError if any character in this sequence is an invalid nucleotide.
         """
 

@@ -9,6 +9,7 @@ from .utils import valid_tables
 
 NUCLEOTIDES = "ATCGN"
 
+
 def test_exhaustive():
     for table in valid_tables():
         for a in NUCLEOTIDES:
