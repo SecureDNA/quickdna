@@ -117,6 +117,7 @@ pub enum TranslationTable {
     Ncbi14,
     Ncbi15,
     Ncbi16,
+    // tables 17-20 are not assigned
     Ncbi21,
     Ncbi22,
     Ncbi23,
@@ -142,9 +143,11 @@ impl TranslationTable {
 
     fn table_index(self) -> usize {
         match self {
+            // table 8 is an alias for table 1
             Self::Ncbi1 | Self::Ncbi8 => 0,
             Self::Ncbi2 => 1,
             Self::Ncbi3 => 2,
+            // table 7 is identical to table 4
             Self::Ncbi4 | Self::Ncbi7 => 3,
             Self::Ncbi5 => 4,
             Self::Ncbi6 => 5,

@@ -8,6 +8,8 @@ st_dna = st.text(alphabet=("a", "A", "t", "T", "c", "C", "g", "G"))
 @given(st_dna)
 def test_translate(dna):
     for table in range(1, 34):
+        # skip tables that are either unassigned (17-20) or are aliases for other
+        # tables that biopython doesn't understand (7 & 8)
         if table not in (7, 8, 17, 18, 19, 20):
             quickdna_translation = DnaSequence(dna).translate(table).seq
             biopython_translation = bytes(Seq(dna).translate(table=table))

@@ -6,6 +6,7 @@ use std::fs;
 
 use quickdna::trans_table::{CodonIdx, Nucleotide, TranslationTable};
 
+// via https://en.wikipedia.org/wiki/List_of_genetic_codes
 const TABLE: &str = "
 ATT || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I
 ATC || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I || I
