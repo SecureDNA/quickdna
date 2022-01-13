@@ -11,19 +11,17 @@ from Bio.Seq import Seq
 from hypothesis import given, strategies as st
 
 from quickdna import DnaSequence
+from .utils import valid_tables
 
-st_dna = st.text(alphabet=("a", "A", "t", "T", "c", "C", "g", "G"))
+st_dna = st.text(alphabet=("a", "A", "t", "T", "c", "C", "g", "G", "n", "N"))
 
 
 @given(st_dna)
 def test_translate(dna):
-    for table in range(1, 34):
-        # skip tables that are either unassigned (17-20) or are aliases for other
-        # tables that biopython doesn't understand (7 & 8)
-        if table not in (7, 8, 17, 18, 19, 20):
-            quickdna_translation = DnaSequence(dna).translate(table).seq
-            biopython_translation = bytes(Seq(dna).translate(table=table))
-            assert quickdna_translation == biopython_translation
+    for table in valid_tables():
+        quickdna_translation = DnaSequence(dna).translate(table).seq
+        biopython_translation = bytes(Seq(dna).translate(table=table))
+        assert quickdna_translation == biopython_translation
 
 
 @given(st_dna)
