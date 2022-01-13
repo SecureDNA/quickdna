@@ -1,3 +1,12 @@
+"""
+These are conformance tests that ensure the output of quickdna matches biopython
+for randomly-generated strings of DNA.
+
+Hypothesis is a property testing library, which means it takes some schema, in
+our case valid DNA strings, and generates random data matching that schema in
+order to test certain assertions hold.
+"""
+
 from Bio.Seq import Seq
 from hypothesis import given, strategies as st
 

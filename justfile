@@ -16,7 +16,7 @@ develop:
 
 # Builds the wheel, installs it, and runs pytest
 test: develop
-    pytest
+    HYPOTHESIS_PROFILE=dev pytest
 
 # Builds the wheel, installs it, and runs the benchmarks against biopython
 bench: develop
