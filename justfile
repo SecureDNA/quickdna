@@ -26,16 +26,17 @@ bench: develop
 profile: develop
     flamegraph python benchmarks/bench.py --no-compare
 
-# Runs cargo fmt, clippy, and black
+# Runs fmt, clippy, and black
 check: fmt clippy black
 
-# Runs cargo fmt
+# Runs cargo fmt to format Rust code
 fmt:
     cargo fmt --all
 
-# Runs clippy
+# Runs clippy to lint Rust code
 clippy:
     cargo clippy --all
 
+# Runs black to format Python code
 black:
     poetry run black .
