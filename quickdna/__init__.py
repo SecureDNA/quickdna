@@ -4,12 +4,14 @@ from .quickdna import _translate, _reverse_complement  # type: ignore
 
 T = ty.TypeVar("T", bound="BaseSequence")
 
+
 def ensure_bytes(str_or_bytes: ty.Union[str, bytes]) -> bytes:
     """Encodes str as ascii (in strict mode), passing bytes along unchanged"""
 
     if isinstance(str_or_bytes, str):
         str_or_bytes = str_or_bytes.encode("ascii", "strict")
     return str_or_bytes
+
 
 class BaseSequence:
     """Base class for DNA and Protein sequences."""
@@ -43,13 +45,13 @@ class BaseSequence:
             return type(self)(seq)
         else:
             raise TypeError(f"can't index with {type(key)}")
-    
+
     def __len__(self) -> int:
         return len(self._seq)
-    
+
     def __iter__(self) -> ty.Iterator[str]:
         return (chr(i) for i in self._seq)
-    
+
     def __add__(self: T, other: ty.Union[str, bytes, T]) -> T:
         if isinstance(other, (str, bytes)):
             other = ensure_bytes(other)

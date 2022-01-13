@@ -14,6 +14,7 @@ from quickdna import DnaSequence
 
 st_dna = st.text(alphabet=("a", "A", "t", "T", "c", "C", "g", "G"))
 
+
 @given(st_dna)
 def test_translate(dna):
     for table in range(1, 34):
@@ -23,6 +24,7 @@ def test_translate(dna):
             quickdna_translation = DnaSequence(dna).translate(table).seq
             biopython_translation = bytes(Seq(dna).translate(table=table))
             assert quickdna_translation == biopython_translation
+
 
 @given(st_dna)
 def test_reverse_complement(dna):

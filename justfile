@@ -26,8 +26,8 @@ bench: develop
 profile: develop
     flamegraph python benchmarks/bench.py --no-compare
 
-# Runs cargo fmt and clippy
-check: fmt clippy
+# Runs cargo fmt, clippy, and black
+check: fmt clippy black
 
 # Runs cargo fmt
 fmt:
@@ -37,3 +37,5 @@ fmt:
 clippy:
     cargo clippy --all
 
+black:
+    poetry run black .

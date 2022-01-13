@@ -2,8 +2,10 @@ import pytest
 
 from quickdna import DnaSequence, ProteinSequence
 
+
 def test_translate():
     assert DnaSequence("AAAGGGAAA").translate(table=1) == ProteinSequence("KGK")
+
 
 def test_equality():
     d1 = DnaSequence("aaa")
@@ -16,6 +18,7 @@ def test_equality():
     assert d2 != p1
     assert p1 == p2
 
+
 def test_hash():
     d1 = DnaSequence("aaa")
     d2 = DnaSequence("aaa")
@@ -26,12 +29,14 @@ def test_hash():
     assert hash(d1) != hash(p1)
     assert hash(p1) == hash(p2)
 
+
 def test_indexing_slicing_dna():
     d = DnaSequence("aaa")
     assert d[1] == ord("a")
     assert d[:] == DnaSequence("aaa")
     assert d[1:] == DnaSequence("aa")
     assert d[1:] != ProteinSequence("aa")
+
 
 def test_indexing_slicing_protein():
     p = ProteinSequence("aaa")
@@ -45,9 +50,11 @@ def test_len_dna():
     d = DnaSequence("a" * 20)
     assert len(d) == 20
 
+
 def test_len_protein():
     p = ProteinSequence("a" * 20)
     assert len(p) == 20
+
 
 def test_add():
     d1 = DnaSequence("at")
@@ -61,12 +68,14 @@ def test_add():
     with pytest.raises(TypeError):
         d1 + p1  # type: ignore
 
+
 def test_mul():
     d = DnaSequence("a") * 20
     assert d == DnaSequence("a" * 20)
 
     p = ProteinSequence("k") * 20
     assert p == ProteinSequence("k" * 20)
+
 
 def test_iter():
     dna_src = "atcg" * 20
