@@ -21,6 +21,8 @@ class BaseSequence:
         Constructs a sequence from an input str or bytes.
 
         Raises UnicodeEncodeError if the input seq is a str with non-ascii characters.
+        Does no other validation -- ValueError may be thrown later by `DnaSequence.translate()`,
+        for example, if the sequence contains invalid characters like 'Q'.
         """
 
         self._seq = ensure_bytes(seq)
@@ -91,25 +93,38 @@ class BaseSequence:
 
 
 class ProteinSequence(BaseSequence):
+    """
+    A protein sequence is a sequence of IUPAC amino acid code ASCII bytes.
+    """
+
     pass
 
 
 class DnaSequence(BaseSequence):
+    """
+    A DNA sequence is a sequence of A, T, C, G, or N (ambiguous) nucleotide ASCII bytes.
+    """
+
     def translate(self, table: int = 1) -> ProteinSequence:
         """
         Translate a DNA sequence into a protein sequence, using the specified
         NCBI table ID.
+
+        Raises ValueError if the table argument is invalid or any characters in
+        this sequence are invalid nucleotides.
         """
 
         seq = _translate(table, self._seq)
         return ProteinSequence(seq)
 
-    def translate_all_frames(
+    def translate_3_frames(
         self, table: int = 1
     ) -> ty.Tuple[ProteinSequence, ProteinSequence, ProteinSequence]:
         """
         Translate this DNA sequence into 3 protein sequences, one for each possible
-        reading frame.
+        reading frame on this sense.
+
+        Can raise ValueError, see `self.translate()`
         """
 
         return (
@@ -118,8 +133,34 @@ class DnaSequence(BaseSequence):
             self[2:].translate(table),
         )
 
+    def translate_all_frames(
+        self, table: int = 1
+    ) -> ty.Tuple[
+        ProteinSequence,
+        ProteinSequence,
+        ProteinSequence,
+        ProteinSequence,
+        ProteinSequence,
+        ProteinSequence,
+    ]:
+        """
+        Translate this DNA sequence into 6 protein sequences, one for each possible
+        reading frame on this sense and the reverse complement.
+
+        Can raise ValueError, see `self.translate()`
+        """
+
+        return (
+            *self.translate_3_frames(table=table),
+            *self.reverse_complement().translate_3_frames(table=table),
+        )
+
     def reverse_complement(self) -> "DnaSequence":
-        """Takes the reverse complement of a DNA sequence"""
+        """
+        Takes the reverse complement of a DNA sequence.
+        
+        Raises ValueError if any character in this sequence is an invalid nucleotide.
+        """
 
         seq = _reverse_complement(self._seq)
         return DnaSequence(seq)
