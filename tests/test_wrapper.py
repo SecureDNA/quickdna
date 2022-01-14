@@ -7,6 +7,58 @@ def test_translate():
     assert DnaSequence("AAAGGGAAA").translate(table=1) == ProteinSequence("KGK")
 
 
+def test_translate_self():
+    assert DnaSequence("AAAGGGAAA").translate_self_frames(table=1) == [
+        ProteinSequence("KGK"),
+        ProteinSequence("KG"),
+        ProteinSequence("RE"),
+    ]
+
+
+def test_short_translate_self():
+    assert DnaSequence("GGGG").translate_self_frames(table=1) == [
+        ProteinSequence("G"),
+        ProteinSequence("G"),
+    ]
+
+    assert DnaSequence("GGG").translate_self_frames(table=1) == [
+        ProteinSequence("G"),
+    ]
+
+    assert DnaSequence("GG").translate_self_frames(table=1) == []
+    assert DnaSequence("G").translate_self_frames(table=1) == []
+    assert DnaSequence("").translate_self_frames(table=1) == []
+
+
+def test_translate_all():
+    assert DnaSequence("AAAGGGAAA").translate_all_frames(table=1) == [
+        ProteinSequence("KGK"),
+        ProteinSequence("KG"),
+        ProteinSequence("RE"),
+        ProteinSequence("FPF"),
+        ProteinSequence("FP"),
+        ProteinSequence("SL"),
+    ]
+
+
+def test_short_translate_all():
+    assert DnaSequence("GGGG").translate_all_frames(table=1) == [
+        ProteinSequence("G"),
+        ProteinSequence("G"),
+        ProteinSequence("P"),
+        ProteinSequence("P"),
+    ]
+
+    assert DnaSequence("GGG").translate_all_frames(table=1) == [
+        ProteinSequence("G"),
+        ProteinSequence("P"),
+    ]
+
+    assert DnaSequence("GG").translate_all_frames(table=1) == []
+    assert DnaSequence("G").translate_all_frames(table=1) == []
+    assert DnaSequence("").translate_all_frames(table=1) == []
+
+
 def test_equality():
     d1 = DnaSequence("aaa")
     d2 = DnaSequence("aaa")
