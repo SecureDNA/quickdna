@@ -117,43 +117,52 @@ class DnaSequence(BaseSequence):
         seq = _translate(table, self._seq)
         return ProteinSequence(seq)
 
-    def translate_3_frames(
-        self, table: int = 1
-    ) -> ty.Tuple[ProteinSequence, ProteinSequence, ProteinSequence]:
+    def translate_self_frames(self, table: int = 1) -> ty.List[ProteinSequence]:
         """
-        Translate this DNA sequence into 3 protein sequences, one for each possible
+        Translate this DNA sequence into up to 3 protein sequences, one for each possible
         reading frame on this sense.
 
+        May return less than 3 proteins for too-short sequences.
+        For example, a sequence of length 4 only has 2 reading frames,
+        and a sequence of length 2 has none.
+
         Can raise ValueError, see `self.translate()`
         """
 
-        return (
-            self.translate(table),
-            self[1:].translate(table),
-            self[2:].translate(table),
-        )
+        if len(self) >= 5:
+            return [
+                self.translate(table),
+                self[1:].translate(table),
+                self[2:].translate(table),
+            ]
+        elif len(self) == 4:
+            return [
+                self.translate(table),
+                self[1:].translate(table),
+            ]
+        elif len(self) == 3:
+            return [
+                self.translate(table),
+            ]
+        else:
+            return []
 
-    def translate_all_frames(
-        self, table: int = 1
-    ) -> ty.Tuple[
-        ProteinSequence,
-        ProteinSequence,
-        ProteinSequence,
-        ProteinSequence,
-        ProteinSequence,
-        ProteinSequence,
-    ]:
+    def translate_all_frames(self, table: int = 1) -> ty.List[ProteinSequence]:
         """
-        Translate this DNA sequence into 6 protein sequences, one for each possible
+        Translate this DNA sequence into at most 6 protein sequences, one for each possible
         reading frame on this sense and the reverse complement.
 
+        May return less than 6 proteins for too-short sequences.
+        For example, a sequence of length 4 only has 2 reading frames,
+        and a sequence of length 2 has none.
+
         Can raise ValueError, see `self.translate()`
         """
 
-        return (
-            *self.translate_3_frames(table=table),
-            *self.reverse_complement().translate_3_frames(table=table),
-        )
+        return [
+            *self.translate_self_frames(table=table),
+            *self.reverse_complement().translate_self_frames(table=table),
+        ]
 
     def reverse_complement(self) -> "DnaSequence":
         """
