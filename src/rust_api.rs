@@ -103,8 +103,10 @@ impl FromStr for ProteinSequence {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if std::intrinsics::likely(s.is_ascii()) {
+            let mut vec = s.as_bytes().to_vec();
+            vec.make_ascii_uppercase();
             Ok(Self {
-                amino_acids: s.as_bytes().to_vec(),
+                amino_acids: vec,
             })
         } else {
             let first_non_ascii = s.chars().find(|c| !c.is_ascii()).unwrap();
@@ -358,14 +360,29 @@ mod tests {
     }
 
     #[test]
-    fn test_equality() {
+    fn test_dna_equality() {
         let d1 = dna("aaa");
         let d2 = dna("aaa");
-        let p1 = protein("aaa");
-        let p2 = protein("aaa");
+        let d3 = dna("aAa");
 
         assert_eq!(d1, d2);
+        assert_eq!(d1, d3);
+    }
+
+    #[test]
+    fn test_protein_equality() {
+        let p1 = protein("aaa");
+        let p2 = protein("aaa");
+        let p3 = protein("aAa");
+
         assert_eq!(p1, p2);
+        assert_eq!(p1, p3);
+    }
+
+    #[test]
+    fn test_protein_case() {
+        assert_eq!(dna("GGG").translate(TranslationTable::Ncbi1), protein("g"));
+        assert_eq!(dna("GGG").translate(TranslationTable::Ncbi1), protein("G"));
     }
 
     #[test]
