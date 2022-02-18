@@ -215,16 +215,31 @@ impl fmt::Display for DnaSequence {
     }
 }
 
+impl TryFrom<&[u8]> for DnaSequence {
+    type Error = TranslationError;
+
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        let mut vec = vec![Nucleotide::N; value.len()];
+        for (idx, &b) in value.iter().enumerate() {
+            vec[idx] = Nucleotide::try_from(b)?;
+        }
+        Ok(Self::new(vec))
+    }
+}
+
+impl TryFrom<Vec<u8>> for DnaSequence {
+    type Error = TranslationError;
+
+    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+        Self::try_from(&value[..])
+    }
+}
+
 impl FromStr for DnaSequence {
     type Err = TranslationError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut vec = vec![Nucleotide::N; s.len()];
-        for (idx, &b) in s.as_bytes().iter().enumerate() {
-            let n = Nucleotide::try_from(b)?;
-            vec[idx] = n;
-        }
-        Ok(Self::new(vec))
+        Self::try_from(s.as_bytes())
     }
 }
 
