@@ -14,9 +14,10 @@ build:
 develop:
     poetry run maturin develop --release
 
-# Builds the wheel, installs it, and runs pytest
+# Builds the wheel, installs it, and runs pytest. Then runs rust API tests.
 test: develop
     HYPOTHESIS_PROFILE=dev pytest
+    cargo test
 
 # Builds the wheel, installs it, and runs the benchmarks against biopython
 bench: develop
