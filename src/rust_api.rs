@@ -66,8 +66,14 @@ pub struct ProteinSequence {
 }
 
 impl ProteinSequence {
-    pub fn new(amino_acids: Vec<u8>) -> Self {
+    fn new_unchecked(amino_acids: Vec<u8>) -> Self {
         Self { amino_acids }
+    }
+
+    pub fn windows(&self, length: usize) -> impl Iterator<Item = Self> + '_ {
+        self.amino_acids
+            .windows(length)
+            .map(|w| Self::new_unchecked(w.to_vec()))
     }
 }
 
@@ -122,7 +128,7 @@ impl DnaSequence {
     /// translation table.
     pub fn translate(&self, table: TranslationTable) -> ProteinSequence {
         let amino_acids = table.translate_dna(&self.dna);
-        ProteinSequence::new(amino_acids)
+        ProteinSequence::new_unchecked(amino_acids)
     }
 
     /// Translate this DNA sequence into up to 3 protein sequences, one for each possible
@@ -179,6 +185,10 @@ impl DnaSequence {
     /// Takes the reverse complement of a DNA sequence.
     pub fn reverse_complement(&self) -> Self {
         Self::new(reverse_complement(&self.dna))
+    }
+
+    pub fn windows(&self, length: usize) -> impl Iterator<Item = Self> + '_ {
+        self.dna.windows(length).map(|w| Self::new(w.to_vec()))
     }
 }
 
@@ -353,5 +363,51 @@ mod tests {
         assert_eq!(hash(&d1), hash(&d2));
         assert!(hash(&d1) != hash(&p1));
         assert_eq!(hash(&p1), hash(&p2));
+    }
+
+    #[test]
+    fn test_dna_windows() {
+        let d = dna("gcantacctaangtnattag");
+        assert_eq!(
+            d.windows(10).collect::<Vec<_>>(),
+            vec![
+                dna("gcantaccta"),
+                dna("cantacctaa"),
+                dna("antacctaan"),
+                dna("ntacctaang"),
+                dna("tacctaangt"),
+                dna("acctaangtn"),
+                dna("cctaangtna"),
+                dna("ctaangtnat"),
+                dna("taangtnatt"),
+                dna("aangtnatta"),
+                dna("angtnattag"),
+            ]
+        );
+
+        assert_eq!(dna("antg").windows(10).next(), None);
+    }
+
+    #[test]
+    fn test_protein_windows() {
+        let p = protein("gcantacctaangtnattag");
+        assert_eq!(
+            p.windows(10).collect::<Vec<_>>(),
+            vec![
+                protein("gcantaccta"),
+                protein("cantacctaa"),
+                protein("antacctaan"),
+                protein("ntacctaang"),
+                protein("tacctaangt"),
+                protein("acctaangtn"),
+                protein("cctaangtna"),
+                protein("ctaangtnat"),
+                protein("taangtnatt"),
+                protein("aangtnatta"),
+                protein("angtnattag"),
+            ]
+        );
+
+        assert_eq!(protein("antg").windows(10).next(), None);
     }
 }
