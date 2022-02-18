@@ -4,9 +4,9 @@ use std::str::FromStr;
 
 use smallvec::SmallVec;
 
-use crate::errors::TranslationError;
 pub use crate::nucleotide::{Codon, Nucleotide};
 pub use crate::trans_table::TranslationTable;
+pub use crate::errors::TranslationError;
 
 use crate::trans_table::reverse_complement;
 
