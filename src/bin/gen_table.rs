@@ -4,7 +4,10 @@
 
 use std::fs;
 
-use quickdna::trans_table::{Codon, CodonIdx, Nucleotide, TranslationTable};
+use quickdna::{
+    trans_table::{CodonIdx, TranslationTable},
+    Codon, Nucleotide,
+};
 
 // via https://en.wikipedia.org/wiki/List_of_genetic_codes
 const TABLE: &str = "
