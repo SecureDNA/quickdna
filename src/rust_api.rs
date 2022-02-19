@@ -4,9 +4,9 @@ use std::str::FromStr;
 
 use smallvec::SmallVec;
 
+pub use crate::errors::TranslationError;
 pub use crate::nucleotide::{Codon, Nucleotide};
 pub use crate::trans_table::TranslationTable;
-pub use crate::errors::TranslationError;
 
 use crate::trans_table::reverse_complement;
 
@@ -98,20 +98,34 @@ impl fmt::Display for ProteinSequence {
     }
 }
 
+impl TryFrom<&[u8]> for ProteinSequence {
+    type Error = TranslationError;
+
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        if std::intrinsics::likely(value.is_ascii()) {
+            let mut vec = value.to_vec();
+            vec.make_ascii_uppercase();
+            Ok(Self { amino_acids: vec })
+        } else {
+            let first_non_ascii = *value.iter().find(|b| !b.is_ascii()).unwrap();
+            Err(TranslationError::NonAsciiByte(first_non_ascii))
+        }
+    }
+}
+
+impl TryFrom<Vec<u8>> for ProteinSequence {
+    type Error = TranslationError;
+
+    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+        Self::try_from(&value[..])
+    }
+}
+
 impl FromStr for ProteinSequence {
     type Err = TranslationError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if std::intrinsics::likely(s.is_ascii()) {
-            let mut vec = s.as_bytes().to_vec();
-            vec.make_ascii_uppercase();
-            Ok(Self {
-                amino_acids: vec,
-            })
-        } else {
-            let first_non_ascii = s.chars().find(|c| !c.is_ascii()).unwrap();
-            Err(TranslationError::NonAsciiChar(first_non_ascii))
-        }
+        Self::try_from(s.as_bytes())
     }
 }
 
