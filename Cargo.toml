@@ -8,11 +8,12 @@ authors = ["Theia Vogel <theia@vgel.me>"]
 lazy_static = "1.4.0"
 thiserror = "1.0.30"
 smallvec = "1.8.0"
+pyo3 = {version = "0.15.1", features = ["extension-module"], optional = true}
 
 [lib]
 name = "quickdna"
 crate-type = ["cdylib", "rlib"]
 
-[dependencies.pyo3]
-version = "0.15.1"
-features = ["extension-module"]
+[features]
+python-support = ["dep:pyo3"]
+default = ["python-support"]
