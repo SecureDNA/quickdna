@@ -2,6 +2,7 @@
 /.hypothesis
 /.vscode
 __pycache__/
+/.idea
 
 perf.data
 perf.data.old
