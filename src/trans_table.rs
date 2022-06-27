@@ -114,7 +114,7 @@ impl TranslationTable {
         // this will truncate any trailing non-multiple-of-3 chunk
         // biopython also truncates, but warns -- generally I don't think we care,
         // so I just made it silently truncate
-        for &chunk in dna.array_chunks::<3>() {
+        for chunk in dna.chunks_exact(3) {
             let a = chunk[0].try_into()?;
             let b = chunk[1].try_into()?;
             let c = chunk[2].try_into()?;
@@ -140,8 +140,9 @@ impl TranslationTable {
         // this will truncate any trailing non-multiple-of-3 chunk
         // biopython also truncates, but warns -- generally I don't think we care,
         // so I just made it silently truncate
-        for &chunk in dna.array_chunks::<3>() {
-            let codon_idx = CodonIdx::from(chunk);
+        for chunk in dna.chunks_exact(3) {
+            let sized_chunk: [Nucleotide; 3] = [chunk[0], chunk[1], chunk[2]];
+            let codon_idx = CodonIdx::from(sized_chunk);
             result.push(
                 Self::TRANSLATION_TABLES
                     [table_idx * TranslationTable::CODONS_PER_TABLE + usize::from(codon_idx)],

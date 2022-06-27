@@ -102,7 +102,7 @@ impl TryFrom<&[u8]> for ProteinSequence {
     type Error = TranslationError;
 
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        if std::intrinsics::likely(value.is_ascii()) {
+        if value.is_ascii() {
             let mut vec = value.to_vec();
             vec.make_ascii_uppercase();
             Ok(Self { amino_acids: vec })
@@ -157,7 +157,7 @@ impl DnaSequence {
         let mut result = SmallVec::with_capacity(3);
 
         // avoid empty translations & multiple branches
-        if std::intrinsics::likely(self.len() >= 5) {
+        if self.len() >= 5 {
             result.push(ProteinSequence {
                 amino_acids: table.translate_dna(&self.dna[0..]),
             });
