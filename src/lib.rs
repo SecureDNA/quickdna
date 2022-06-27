@@ -1,5 +1,3 @@
-#![feature(array_chunks)]
-#![feature(core_intrinsics)]
 #![allow(non_snake_case)]
 
 mod errors;

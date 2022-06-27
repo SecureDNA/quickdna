@@ -54,9 +54,9 @@ impl TryFrom<u8> for Nucleotide {
 
     #[inline(always)]
     fn try_from(u: u8) -> Result<Self, Self::Error> {
-        if std::intrinsics::likely(u < 128) {
+        if u < 128 {
             let v = Self::ASCII_PACK_TABLE[u as usize];
-            if std::intrinsics::likely(v < Self::N_NUCLEOTIDES) {
+            if v < Self::N_NUCLEOTIDES {
                 // SAFETY: there are only X variants, with assigned numbers, so 0..=(X - 1)
                 //         are valid reprs of this type
                 Ok(unsafe { std::mem::transmute(v) })
