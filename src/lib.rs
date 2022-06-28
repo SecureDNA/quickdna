@@ -1,8 +1,13 @@
 #![allow(non_snake_case)]
 
+extern crate core;
+
 mod errors;
 mod nucleotide;
 pub mod trans_table; // needs to be public for bin/gen_table
+
+mod fasta;
+pub use fasta::*;
 
 mod rust_api;
 pub use rust_api::*;
