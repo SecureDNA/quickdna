@@ -1,11 +1,10 @@
 // This module is for reading and writing FASTA format files
 
+use crate::DnaSequence;
 use std::io::BufRead;
 use std::str::FromStr;
-use crate::DnaSequence;
 
-pub struct SimpleFastaParser {
-}
+pub struct SimpleFastaParser {}
 
 impl SimpleFastaParser {
     pub fn parse<R: BufRead>(handle: &mut R) -> Result<Vec<(String, String)>, anyhow::Error> {
@@ -36,7 +35,6 @@ impl SimpleFastaParser {
                                     lines.push(l.replace(" ", "").replace("\r", ""));
                                 }
                             }
-
                         }
                     }
                 }
@@ -52,26 +50,26 @@ impl SimpleFastaParser {
     }
 }
 
-pub struct DNAFastaParser {
-
-}
+pub struct DNAFastaParser {}
 
 impl DNAFastaParser {
     pub fn parse<R: BufRead>(handle: &mut R) -> Result<Vec<(String, DnaSequence)>, anyhow::Error> {
-        SimpleFastaParser::parse(handle)?.into_iter().map(|(title, sequence)| -> Result<(String, DnaSequence), _> {
-            let dna = DnaSequence::from_str(&*sequence)?;
-            Ok((title, dna))
-        }).collect()
+        SimpleFastaParser::parse(handle)?
+            .into_iter()
+            .map(|(title, sequence)| -> Result<(String, DnaSequence), _> {
+                let dna = DnaSequence::from_str(&*sequence)?;
+                Ok((title, dna))
+            })
+            .collect()
     }
 }
 
-
 #[cfg(test)]
 mod tests {
+    use crate::fasta::{DNAFastaParser, SimpleFastaParser};
+    use crate::DnaSequence;
     use std::io::BufReader;
     use std::str::FromStr;
-    use crate::DnaSequence;
-    use crate::fasta::{DNAFastaParser, SimpleFastaParser};
 
     #[test]
     fn test_empty_fasta() {
@@ -87,7 +85,10 @@ mod tests {
 
     #[test]
     fn test_empty_fasta_with_many_newlines() {
-        let r = SimpleFastaParser::parse(&mut BufReader::new("  \n\n \n  \r\r \r\n  \r \n".as_bytes())).unwrap();
+        let r = SimpleFastaParser::parse(&mut BufReader::new(
+            "  \n\n \n  \r\r \r\n  \r \n".as_bytes(),
+        ))
+        .unwrap();
         assert_eq!(r.len(), 0);
     }
 
@@ -107,13 +108,19 @@ mod tests {
 
     #[test]
     fn test_fasta_with_stuff_no_header() {
-        let r = SimpleFastaParser::parse(&mut BufReader::new("// this is a file comment\n@author is foo\n\n".as_bytes())).unwrap();
+        let r = SimpleFastaParser::parse(&mut BufReader::new(
+            "// this is a file comment\n@author is foo\n\n".as_bytes(),
+        ))
+        .unwrap();
         assert_eq!(r.len(), 0);
     }
 
     #[test]
     fn test_fasta_with_stuff_before_header() {
-        let r = SimpleFastaParser::parse(&mut BufReader::new("// this is a file comment\n@author is foo\n\n>Virus\n\n".as_bytes())).unwrap();
+        let r = SimpleFastaParser::parse(&mut BufReader::new(
+            "// this is a file comment\n@author is foo\n\n>Virus\n\n".as_bytes(),
+        ))
+        .unwrap();
         assert_eq!(r.len(), 1);
         assert_eq!(r.len(), 1);
         assert_eq!(r[0], ("Virus".to_string(), "".to_string()));
@@ -121,21 +128,27 @@ mod tests {
 
     #[test]
     fn test_fasta_with_single_line_content() {
-        let r = SimpleFastaParser::parse(&mut BufReader::new(">Virus\nCAAAGT\n".as_bytes())).unwrap();
+        let r =
+            SimpleFastaParser::parse(&mut BufReader::new(">Virus\nCAAAGT\n".as_bytes())).unwrap();
         assert_eq!(r.len(), 1);
         assert_eq!(r[0], ("Virus".to_string(), "CAAAGT".to_string()));
     }
 
     #[test]
     fn test_fasta_with_multi_line_content() {
-        let r = SimpleFastaParser::parse(&mut BufReader::new(">Virus\nAAAA\nCCCC\nGGGG\n".as_bytes())).unwrap();
+        let r =
+            SimpleFastaParser::parse(&mut BufReader::new(">Virus\nAAAA\nCCCC\nGGGG\n".as_bytes()))
+                .unwrap();
         assert_eq!(r.len(), 1);
         assert_eq!(r[0], ("Virus".to_string(), "AAAACCCCGGGG".to_string()));
     }
 
     #[test]
     fn test_fasta_mutiple_contents() {
-        let r = SimpleFastaParser::parse(&mut BufReader::new(">Virus1\nAAAA\n>Virus2\nCCCC\n".as_bytes())).unwrap();
+        let r = SimpleFastaParser::parse(&mut BufReader::new(
+            ">Virus1\nAAAA\n>Virus2\nCCCC\n".as_bytes(),
+        ))
+        .unwrap();
         assert_eq!(r.len(), 2);
         assert_eq!(r[0], ("Virus1".to_string(), "AAAA".to_string()));
         assert_eq!(r[1], ("Virus2".to_string(), "CCCC".to_string()));
@@ -143,7 +156,10 @@ mod tests {
 
     #[test]
     fn test_fasta_mutiple_contents_multiline() {
-        let r = SimpleFastaParser::parse(&mut BufReader::new(">Virus1\nAAAA\nAAAA\n>Virus2\nCCCC\nCCCC\n".as_bytes())).unwrap();
+        let r = SimpleFastaParser::parse(&mut BufReader::new(
+            ">Virus1\nAAAA\nAAAA\n>Virus2\nCCCC\nCCCC\n".as_bytes(),
+        ))
+        .unwrap();
         assert_eq!(r.len(), 2);
         assert_eq!(r[0], ("Virus1".to_string(), "AAAAAAAA".to_string()));
         assert_eq!(r[1], ("Virus2".to_string(), "CCCCCCCC".to_string()));
@@ -151,17 +167,36 @@ mod tests {
 
     #[test]
     fn test_dna_fasta() {
-        let r: Vec<(String, DnaSequence)> = DNAFastaParser::parse(&mut BufReader::new(">Virus1\nAAAA".as_bytes())).unwrap();
+        let r: Vec<(String, DnaSequence)> =
+            DNAFastaParser::parse(&mut BufReader::new(">Virus1\nAAAA".as_bytes())).unwrap();
         assert_eq!(r.len(), 1);
-        assert_eq!(r[0], ("Virus1".to_string(), DnaSequence::from_str("AAAA").unwrap()));
+        assert_eq!(
+            r[0],
+            ("Virus1".to_string(), DnaSequence::from_str("AAAA").unwrap())
+        );
     }
 
     #[test]
     fn test_dna_fasta_multiple() {
-        let r: Vec<(String, DnaSequence)> = DNAFastaParser::parse(&mut BufReader::new(">Virus1\nAAAA\nAAAA\n>Virus2\nCCCC\nCCCC\n".as_bytes())).unwrap();
+        let r: Vec<(String, DnaSequence)> = DNAFastaParser::parse(&mut BufReader::new(
+            ">Virus1\nAAAA\nAAAA\n>Virus2\nCCCC\nCCCC\n".as_bytes(),
+        ))
+        .unwrap();
         assert_eq!(r.len(), 2);
-        assert_eq!(r[0], ("Virus1".to_string(), DnaSequence::from_str("AAAAAAAA").unwrap()));
-        assert_eq!(r[1], ("Virus2".to_string(), DnaSequence::from_str("CCCCCCCC").unwrap()));
+        assert_eq!(
+            r[0],
+            (
+                "Virus1".to_string(),
+                DnaSequence::from_str("AAAAAAAA").unwrap()
+            )
+        );
+        assert_eq!(
+            r[1],
+            (
+                "Virus2".to_string(),
+                DnaSequence::from_str("CCCCCCCC").unwrap()
+            )
+        );
     }
 
     #[test]
@@ -172,7 +207,9 @@ mod tests {
 
     #[test]
     fn test_dna_invalid_dna_multiple() {
-        let r = DNAFastaParser::parse(&mut BufReader::new(">Virus1\nAAAA\n>Virus2\nAAAAelephant".as_bytes()));
+        let r = DNAFastaParser::parse(&mut BufReader::new(
+            ">Virus1\nAAAA\n>Virus2\nAAAAelephant".as_bytes(),
+        ));
         assert!(matches!(r, Err(_)));
     }
 }
