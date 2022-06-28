@@ -13,32 +13,27 @@ impl SimpleFastaParser {
         let mut lines: Vec<String> = vec![];
         let mut title: Option<String> = None;
 
-        for line in handle.lines() {
-            match line {
-                Ok(l) => {
-                    if let Some(ch) = l.chars().nth(0) {
-                        if ch == '>' {
-                            if let Some(existing_title) = title {
-                                result.push((existing_title, lines.join("")));
-                                lines.clear();
-                            }
+        for line in handle.lines().flatten() {
+            if let Some(ch) = line.chars().next() {
+                if ch == '>' {
+                    if let Some(existing_title) = title {
+                        result.push((existing_title, lines.join("")));
+                        lines.clear();
+                    }
 
-                            let mut c = l.chars();
-                            c.next();
-                            title = Some(c.as_str().trim().to_string());
-                        } else {
-                            match title {
-                                None => {
-                                    // There is no title, skip this content!
-                                }
-                                Some(_) => {
-                                    lines.push(l.replace(" ", "").replace("\r", ""));
-                                }
-                            }
+                    let mut c = line.chars();
+                    c.next();
+                    title = Some(c.as_str().trim().to_string());
+                } else {
+                    match title {
+                        None => {
+                            // There is no title, skip this content!
+                        }
+                        Some(_) => {
+                            lines.push(line.replace(' ', "").replace('\r', ""));
                         }
                     }
                 }
-                _ => {}
             }
         }
 
@@ -46,7 +41,7 @@ impl SimpleFastaParser {
             result.push((t, lines.join("")));
         }
 
-        return Ok(result);
+        Ok(result)
     }
 }
 
