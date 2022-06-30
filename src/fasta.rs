@@ -1,10 +1,13 @@
-// This module is for reading and writing FASTA format files
+//! This module is for reading and writing FASTA format files
 
-use crate::DnaSequence;
 use std::io::BufRead;
 use std::str::FromStr;
 
-pub struct SimpleFastaParser {}
+use thiserror::Error;
+
+use crate::{DnaSequence, TranslationError};
+
+pub struct SimpleFastaParser;
 
 impl SimpleFastaParser {
     pub fn parse<R: BufRead>(handle: &mut R) -> Result<Vec<(String, String)>, std::io::Error> {
@@ -47,12 +50,20 @@ impl SimpleFastaParser {
     }
 }
 
-pub struct DNAFastaParser {}
+pub struct DNAFastaParser;
+
+#[derive(Error, Debug)]
+pub enum DnaFastaParseError {
+    #[error("could not translate FASTA contents")]
+    TranslationError(#[from] TranslationError),
+    #[error("could not read FASTA")]
+    IOError(#[from] std::io::Error),
+}
 
 impl DNAFastaParser {
     pub fn parse<R: BufRead>(
         handle: &mut R,
-    ) -> Result<Vec<(String, DnaSequence)>, Box<dyn std::error::Error>> {
+    ) -> Result<Vec<(String, DnaSequence)>, DnaFastaParseError> {
         SimpleFastaParser::parse(handle)?
             .into_iter()
             .map(|(title, sequence)| -> Result<(String, DnaSequence), _> {
