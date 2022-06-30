@@ -50,7 +50,7 @@ impl SimpleFastaParser {
     }
 }
 
-pub struct DNAFastaParser;
+pub struct DnaFastaParser;
 
 #[derive(Error, Debug)]
 pub enum DnaFastaParseError {
@@ -60,7 +60,7 @@ pub enum DnaFastaParseError {
     IOError(#[from] std::io::Error),
 }
 
-impl DNAFastaParser {
+impl DnaFastaParser {
     pub fn parse<R: BufRead>(
         handle: &mut R,
     ) -> Result<Vec<(String, DnaSequence)>, DnaFastaParseError> {
@@ -76,7 +76,7 @@ impl DNAFastaParser {
 
 #[cfg(test)]
 mod tests {
-    use crate::fasta::{DNAFastaParser, SimpleFastaParser};
+    use crate::fasta::{DnaFastaParser, SimpleFastaParser};
     use crate::DnaSequence;
     use std::io::BufReader;
     use std::str::FromStr;
@@ -181,7 +181,7 @@ mod tests {
     #[test]
     fn test_dna_fasta() {
         let r: Vec<(String, DnaSequence)> =
-            DNAFastaParser::parse(&mut BufReader::new(">Virus1\nAAAA".as_bytes())).unwrap();
+            DnaFastaParser::parse(&mut BufReader::new(">Virus1\nAAAA".as_bytes())).unwrap();
 
         assert_eq!(
             r,
@@ -191,7 +191,7 @@ mod tests {
 
     #[test]
     fn test_dna_fasta_multiple() {
-        let r: Vec<(String, DnaSequence)> = DNAFastaParser::parse(&mut BufReader::new(
+        let r: Vec<(String, DnaSequence)> = DnaFastaParser::parse(&mut BufReader::new(
             ">Virus1\nAAAA\nAAAA\n>Virus2\nCCCC\nCCCC\n".as_bytes(),
         ))
         .unwrap();
@@ -212,13 +212,13 @@ mod tests {
 
     #[test]
     fn test_dna_invalid_dna() {
-        let r = DNAFastaParser::parse(&mut BufReader::new(">Virus1\nAAAAelephant".as_bytes()));
+        let r = DnaFastaParser::parse(&mut BufReader::new(">Virus1\nAAAAelephant".as_bytes()));
         assert!(matches!(r, Err(_)));
     }
 
     #[test]
     fn test_dna_invalid_dna_multiple() {
-        let r = DNAFastaParser::parse(&mut BufReader::new(
+        let r = DnaFastaParser::parse(&mut BufReader::new(
             ">Virus1\nAAAA\n>Virus2\nAAAAelephant".as_bytes(),
         ));
         assert!(matches!(r, Err(_)));
