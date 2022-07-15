@@ -15,7 +15,6 @@ pub trait BaseSequence: std::marker::Sized {
 
     fn as_slice(&self) -> &[Self::Item];
     fn as_mut_slice(&mut self) -> &mut [Self::Item];
-    fn push(&mut self, _item: Self::Item) {}
 
     fn len(&self) -> usize {
         self.as_slice().len()
@@ -76,6 +75,10 @@ impl ProteinSequence {
             .windows(length)
             .map(|w| Self::new_unchecked(w.to_vec()))
     }
+
+    pub fn push(&mut self, aa: u8) {
+        self.amino_acids.push(aa);
+    }
 }
 
 impl BaseSequence for ProteinSequence {
@@ -87,10 +90,6 @@ impl BaseSequence for ProteinSequence {
 
     fn as_mut_slice(&mut self) -> &mut [u8] {
         &mut self.amino_acids
-    }
-
-    fn push(&mut self, aa: u8) {
-        self.amino_acids.push(aa);
     }
 }
 
@@ -211,6 +210,10 @@ impl DnaSequence {
     pub fn windows(&self, length: usize) -> impl Iterator<Item = Self> + '_ {
         self.dna.windows(length).map(|w| Self::new(w.to_vec()))
     }
+
+    pub fn push(&mut self, n: Nucleotide) {
+        self.dna.push(n);
+    }
 }
 
 impl BaseSequence for DnaSequence {
@@ -222,10 +225,6 @@ impl BaseSequence for DnaSequence {
 
     fn as_mut_slice(&mut self) -> &mut [Self::Item] {
         &mut self.dna
-    }
-
-    fn push(&mut self, n: Nucleotide) {
-        self.dna.push(n);
     }
 }
 
