@@ -75,6 +75,10 @@ impl ProteinSequence {
             .windows(length)
             .map(|w| Self::new_unchecked(w.to_vec()))
     }
+
+    pub fn push(&mut self, aa: u8) {
+        self.amino_acids.push(aa);
+    }
 }
 
 impl BaseSequence for ProteinSequence {
@@ -205,6 +209,10 @@ impl DnaSequence {
 
     pub fn windows(&self, length: usize) -> impl Iterator<Item = Self> + '_ {
         self.dna.windows(length).map(|w| Self::new(w.to_vec()))
+    }
+
+    pub fn push(&mut self, n: Nucleotide) {
+        self.dna.push(n);
     }
 }
 

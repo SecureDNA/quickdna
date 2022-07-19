@@ -20,6 +20,9 @@ impl Nucleotide {
     pub const NUCLEOTIDES: [Self; 5] = [Self::A, Self::T, Self::C, Self::G, Self::N];
     const N_NUCLEOTIDES: u8 = Self::NUCLEOTIDES.len() as u8;
 
+    pub const PURINES: [Self; 2] = [Self::A, Self::G];
+    pub const PYRIMIDINES: [Self; 2] = [Self::C, Self::T];
+
     const fn ascii_pack_table() -> [u8; 128] {
         let mut pack_table = [255u8; 128];
         pack_table[b'a' as usize] = Self::A as u8;
