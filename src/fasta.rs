@@ -444,13 +444,12 @@ impl<T: FromStr> FastaParser<T> {
     }
 }
 
-/// Try to parse a FASTA header (prefixed with > or ;), returning the line without the prefix char, and with any trailing
-/// newlines removed
+/// Try to parse a FASTA header (prefixed with > or ;), returning the line without the prefix char.
 fn try_parse_header(line: &str) -> Option<&str> {
     let head = line.chars().next();
     // ; is semi-obsolete alternative header char
     if head == Some('>') || head == Some(';') {
-        Some(line[1..].trim_end_matches('\n')) // we know it's an ASCII char so this slice is panic-safe
+        Some(&line[1..]) // we know it's an ASCII char so this slice is panic-safe
     } else {
         None
     }
@@ -461,6 +460,7 @@ mod tests {
     use super::*;
 
     use crate::{DnaSequence, ProteinSequence, TranslationError};
+    use std::time::Duration;
 
     macro_rules! assert_parse {
         ($testcase:expr, $parser:expr, $expected:expr) => {
@@ -568,6 +568,22 @@ mod tests {
             }),
             expected
         );
+    }
+
+    /// Helper to panic if a closure doesn't complete within a specified Duration.
+    /// Author: @shepmaster, https://github.com/rust-lang/rfcs/issues/2798#issuecomment-552949300
+    fn panic_after<T: Send + 'static, F: FnOnce() -> T + Send + 'static>(d: Duration, f: F) -> T {
+        let (done_tx, done_rx) = std::sync::mpsc::channel();
+        let handle = std::thread::spawn(move || {
+            let val = f();
+            done_tx.send(()).expect("Unable to send completion signal");
+            val
+        });
+
+        match done_rx.recv_timeout(d) {
+            Ok(_) => handle.join().expect("Thread panicked"),
+            Err(_) => panic!("Thread took too long"),
+        }
     }
 
     #[test]
@@ -842,6 +858,134 @@ mod tests {
                 line_range: (1, 3),
             }],
         );
+    }
+
+    #[test]
+    fn test_fasta_unicode() {
+        // U+2009 is THIN-SPACE, which is White_Space=yes so should be ignored even if allow_comment is false
+        // Note that some "spacey" unicode characters, like U+200B "ZERO WIDTH SPACE", are White_Space=no
+        assert_parse_with_all_settings("\u{2009}\r\n>ὦ Ᾰ̓θηνᾶ, Heizölrückstoßabdämpfungを持つ!\nPchnąć w tę łódź jeża lub ośm skrzyń fig", vec![FastaRecord {
+            header: "ὦ Ᾰ̓θηνᾶ, Heizölrückstoßabdämpfungを持つ!".to_string(),
+            contents: "Pchnąć w tę łódź jeża lub ośm skrzyń fig".to_string(),
+            line_range: (2, 4),
+        }])
+    }
+
+    #[test]
+    fn test_fasta_ignores_alternative_linebreaks() {
+        use std::fmt::Write;
+
+        let bad_linebreaks = [
+            '\x0B',     // LINE TABULATION  (\v)
+            '\x0C',     // FORM FEED (\f)
+            '\x0D',     // CARRIAGE RETURN (\r)
+            '\u{0085}', // NEXT LINE
+            '\u{2028}', // LINE SEPARATOR
+            '\u{2029}', // PARAGRAPH SEPARATOR
+        ];
+        let mut test_case = "contents-should-be-single-line:".to_string();
+        for lb in bad_linebreaks {
+            write!(
+                test_case,
+                " {}>U+{:x} should not be a header",
+                lb, lb as u32
+            )
+            .unwrap();
+        }
+
+        assert_parse_with_allow_preceding_comment(
+            &test_case.clone(),
+            false,
+            vec![FastaRecord {
+                header: "".to_string(),
+                contents: test_case,
+                line_range: (1, 2),
+            }],
+        )
+    }
+
+    #[test]
+    fn test_fasta_handles_windows_newline() {
+        // the Rust BufRead trait's `lines()` method should handle \r\n lines by removing the \r as well,
+        // so this just checks that we're not doing anything to mess that up
+
+        assert_parse_with_all_settings(
+            "\r\n>i love compatability\r\nwindows is awesome\r\n",
+            vec![FastaRecord {
+                header: "i love compatability".to_string(),
+                contents: "windows is awesome".to_string(),
+                line_range: (2, 4),
+            }],
+        )
+    }
+
+    #[test]
+    fn test_concat_headers_not_quadratic() {
+        // if this test gets slow, we probably accidentally introduced quadratic behavior somewhere
+
+        let mut test_case = String::new();
+        for _ in 0..10_000 {
+            test_case.push_str(">header\n");
+        }
+        let header = test_case.trim().replace('>', "");
+
+        panic_after(Duration::from_millis(200), move || {
+            assert_parse_with_concatenate_headers(
+                &test_case,
+                true,
+                vec![FastaRecord {
+                    header,
+                    contents: "".to_string(),
+                    line_range: (1, 10_001),
+                }],
+            )
+        });
+    }
+
+    #[test]
+    fn test_comment_not_quadratic() {
+        // if this test gets slow, we probably accidentally introduced quadratic behavior somewhere
+
+        let mut test_case = String::new();
+        for _ in 0..10_000 {
+            test_case.push_str("comment\n");
+        }
+        let contents = test_case.replace('\n', "");
+
+        panic_after(Duration::from_millis(200), move || {
+            assert_parse_with_allow_preceding_comment(
+                &test_case,
+                false,
+                vec![FastaRecord {
+                    header: "".to_string(),
+                    contents,
+                    line_range: (1, 10_001),
+                }],
+            )
+        });
+    }
+
+    #[test]
+    fn test_contents_not_quadratic() {
+        // if this test gets slow, we probably accidentally introduced quadratic behavior somewhere
+
+        let mut contents = String::new();
+        for _ in 0..10_000 {
+            contents.push_str("contents\n");
+        }
+        let test_case = format!(">header\n{contents}");
+        let contents = contents.replace('\n', "");
+
+        panic_after(Duration::from_millis(200), move || {
+            assert_parse_with_all_settings(
+                &test_case,
+                vec![FastaRecord {
+                    header: "header".to_string(),
+                    contents,
+                    line_range: (1, 10_002),
+                }],
+            )
+        });
     }
 
     #[test]
