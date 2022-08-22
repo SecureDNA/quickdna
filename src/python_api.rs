@@ -1,3 +1,5 @@
+#![allow(clippy::borrow_deref_ref)] // TODO: broken clippy lint?
+
 use pyo3::{exceptions::PyValueError, prelude::*, types::PyBytes};
 
 use crate::{
