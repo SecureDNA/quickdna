@@ -25,16 +25,32 @@ impl Nucleotide {
 
     const fn ascii_pack_table() -> [u8; 128] {
         let mut pack_table = [255u8; 128];
-        pack_table[b'a' as usize] = Self::A as u8;
-        pack_table[b'A' as usize] = Self::A as u8;
-        pack_table[b't' as usize] = Self::T as u8;
-        pack_table[b'T' as usize] = Self::T as u8;
-        pack_table[b'c' as usize] = Self::C as u8;
-        pack_table[b'C' as usize] = Self::C as u8;
-        pack_table[b'g' as usize] = Self::G as u8;
-        pack_table[b'G' as usize] = Self::G as u8;
-        pack_table[b'n' as usize] = Self::N as u8;
-        pack_table[b'N' as usize] = Self::N as u8;
+
+        macro_rules! insert {
+            ($chr:literal, $variant:expr) => {
+                pack_table[$chr.to_ascii_uppercase() as usize] = $variant as u8;
+                pack_table[$chr.to_ascii_lowercase() as usize] = $variant as u8;
+            };
+        }
+
+        insert!(b'a', Self::A);
+        insert!(b't', Self::T);
+        insert!(b'c', Self::C);
+        insert!(b'g', Self::G);
+
+        // ambiguity codes (all mapped to N for now)
+        insert!(b'n', Self::N); // A, T, C, or G (complement N)
+        insert!(b'm', Self::N); // A or C (complement K)
+        insert!(b'r', Self::N); // A or G (complement Y)
+        insert!(b'w', Self::N); // A or T (complement W (self))
+        insert!(b's', Self::N); // C or G (complement S (self))
+        insert!(b'y', Self::N); // C or T (complement R)
+        insert!(b'k', Self::N); // G or T (complement M)
+        insert!(b'v', Self::N); // A, C or G (complement B)
+        insert!(b'h', Self::N); // A, C or T (complement D)
+        insert!(b'd', Self::N); // A, G or T (complement H)
+        insert!(b'b', Self::N); // C, G or T (complement V)
+
         pack_table
     }
 

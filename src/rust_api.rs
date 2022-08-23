@@ -295,6 +295,25 @@ mod tests {
     }
 
     #[test]
+    fn test_dna_parses() {
+        for c in 0_u8..128 {
+            let c = char::from(c);
+            let r = DnaSequence::from_str(&String::from(c));
+            if "aAtTcCgGmMrRwWsSyYkKvVhHdDbBnN".chars().any(|x| x == c) {
+                assert!(
+                    r.is_ok(),
+                    "{c:?} should be a valid nucleotide or ambiguity code"
+                );
+            } else {
+                assert!(
+                    r.is_err(),
+                    "{c:?} should *not* be a valid nucleotide or ambiguity code"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn test_translate() {
         assert_eq!(
             dna("AAAGGGAAA").translate(TranslationTable::Ncbi1),
