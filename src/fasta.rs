@@ -611,12 +611,29 @@ mod tests {
                 line_range: (1, 2),
             }],
         );
+
+        assert_parse_with_all_settings(
+            ";Virus\n",
+            vec![FastaRecord {
+                header: "Virus".to_string(),
+                contents: "".to_string(),
+                line_range: (1, 2),
+            }],
+        );
     }
 
     #[test]
     fn test_fasta_with_empty_content() {
         assert_parse_with_all_settings(
             ">Virus\n\n",
+            vec![FastaRecord {
+                header: "Virus".to_string(),
+                contents: "".to_string(),
+                line_range: (1, 3),
+            }],
+        );
+        assert_parse_with_all_settings(
+            ";Virus\n\n",
             vec![FastaRecord {
                 header: "Virus".to_string(),
                 contents: "".to_string(),
@@ -702,6 +719,14 @@ mod tests {
                 line_range: (1, 3),
             }],
         );
+        assert_parse_with_all_settings(
+            ";Virus\nCAAAGT\n",
+            vec![FastaRecord {
+                header: "Virus".to_string(),
+                contents: "CAAAGT".to_string(),
+                line_range: (1, 3),
+            }],
+        );
     }
 
     #[test]
@@ -714,12 +739,28 @@ mod tests {
                 line_range: (1, 3),
             }],
         );
+        assert_parse_with_all_settings(
+            ";Virus\nCAAAGT",
+            vec![FastaRecord {
+                header: "Virus".to_string(),
+                contents: "CAAAGT".to_string(),
+                line_range: (1, 3),
+            }],
+        );
     }
 
     #[test]
     fn test_fasta_with_multi_line_content() {
         assert_parse_with_all_settings(
             ">Virus\nAAAA\nCCCC\nGGGG\n",
+            vec![FastaRecord {
+                header: "Virus".to_string(),
+                contents: "AAAACCCCGGGG".to_string(),
+                line_range: (1, 5),
+            }],
+        );
+        assert_parse_with_all_settings(
+            ";Virus\nAAAA\nCCCC\nGGGG\n",
             vec![FastaRecord {
                 header: "Virus".to_string(),
                 contents: "AAAACCCCGGGG".to_string(),
@@ -745,12 +786,102 @@ mod tests {
                 },
             ],
         );
+        assert_parse_with_all_settings(
+            ">Virus1\nAAAA\n;Virus2\nCCCC\n",
+            vec![
+                FastaRecord {
+                    header: "Virus1".to_string(),
+                    contents: "AAAA".to_string(),
+                    line_range: (1, 3),
+                },
+                FastaRecord {
+                    header: "Virus2".to_string(),
+                    contents: "CCCC".to_string(),
+                    line_range: (3, 5),
+                },
+            ],
+        );
+        assert_parse_with_all_settings(
+            ";Virus1\nAAAA\n>Virus2\nCCCC\n",
+            vec![
+                FastaRecord {
+                    header: "Virus1".to_string(),
+                    contents: "AAAA".to_string(),
+                    line_range: (1, 3),
+                },
+                FastaRecord {
+                    header: "Virus2".to_string(),
+                    contents: "CCCC".to_string(),
+                    line_range: (3, 5),
+                },
+            ],
+        );
+        assert_parse_with_all_settings(
+            ";Virus1\nAAAA\n;Virus2\nCCCC\n",
+            vec![
+                FastaRecord {
+                    header: "Virus1".to_string(),
+                    contents: "AAAA".to_string(),
+                    line_range: (1, 3),
+                },
+                FastaRecord {
+                    header: "Virus2".to_string(),
+                    contents: "CCCC".to_string(),
+                    line_range: (3, 5),
+                },
+            ],
+        );
     }
 
     #[test]
     fn test_fasta_mutiple_contents_multiline() {
         assert_parse_with_all_settings(
             ">Virus1\nAAAA\nAAAA\n>Virus2\nCCCC\nCCCC\n",
+            vec![
+                FastaRecord {
+                    header: "Virus1".to_string(),
+                    contents: "AAAAAAAA".to_string(),
+                    line_range: (1, 4),
+                },
+                FastaRecord {
+                    header: "Virus2".to_string(),
+                    contents: "CCCCCCCC".to_string(),
+                    line_range: (4, 7),
+                },
+            ],
+        );
+        assert_parse_with_all_settings(
+            ";Virus1\nAAAA\nAAAA\n>Virus2\nCCCC\nCCCC\n",
+            vec![
+                FastaRecord {
+                    header: "Virus1".to_string(),
+                    contents: "AAAAAAAA".to_string(),
+                    line_range: (1, 4),
+                },
+                FastaRecord {
+                    header: "Virus2".to_string(),
+                    contents: "CCCCCCCC".to_string(),
+                    line_range: (4, 7),
+                },
+            ],
+        );
+        assert_parse_with_all_settings(
+            ">Virus1\nAAAA\nAAAA\n;Virus2\nCCCC\nCCCC\n",
+            vec![
+                FastaRecord {
+                    header: "Virus1".to_string(),
+                    contents: "AAAAAAAA".to_string(),
+                    line_range: (1, 4),
+                },
+                FastaRecord {
+                    header: "Virus2".to_string(),
+                    contents: "CCCCCCCC".to_string(),
+                    line_range: (4, 7),
+                },
+            ],
+        );
+        assert_parse_with_all_settings(
+            ";Virus1\nAAAA\nAAAA\n;Virus2\nCCCC\nCCCC\n",
             vec![
                 FastaRecord {
                     header: "Virus1".to_string(),
@@ -1040,6 +1171,24 @@ mod tests {
     }
 
     #[test]
+    fn test_dna_invalid_dna_whitespace() {
+        assert_parse_err!(
+            ">Virus1\nAAAA \n",
+            FastaParser::<DnaSequence>::strict(),
+            FastaParseError::ParseError(TranslationError::BadNucleotide(' '))
+        );
+    }
+
+    #[test]
+    fn test_dna_invalid_dna_unicode() {
+        assert_parse_err!(
+            ">Virus1\nAAčCCG\n",
+            FastaParser::<DnaSequence>::strict(),
+            FastaParseError::ParseError(TranslationError::NonAsciiByte(196))
+        );
+    }
+
+    #[test]
     fn test_protein_fasta() {
         assert_parse!(
             ">Virus1\nAAAA",
@@ -1065,6 +1214,26 @@ mod tests {
                 },
                 FastaRecord {
                     header: "Virus2".to_string(),
+                    contents: "CCCCCCCC".parse().unwrap(),
+                    line_range: (4, 7),
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn test_duplicate_header_lines() {
+        assert_parse!(
+            ">Virus1\nAAAA\nAAAA\n>Virus1\nCCCC\nCCCC\n",
+            FastaParser::<DnaSequence>::strict(),
+            vec![
+                FastaRecord {
+                    header: "Virus1".to_string(),
+                    contents: "AAAAAAAA".parse().unwrap(),
+                    line_range: (1, 4),
+                },
+                FastaRecord {
+                    header: "Virus1".to_string(),
                     contents: "CCCCCCCC".parse().unwrap(),
                     line_range: (4, 7),
                 },
