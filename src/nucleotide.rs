@@ -23,6 +23,20 @@ impl Nucleotide {
     pub const PURINES: [Self; 2] = [Self::A, Self::G];
     pub const PYRIMIDINES: [Self; 2] = [Self::C, Self::T];
 
+    pub const M_AMBIGUITY: [Self; 2] = [Self::A, Self::C];
+    pub const R_AMBIGUITY: [Self; 2] = Self::PURINES;
+    pub const W_AMBIGUITY: [Self; 2] = [Self::A, Self::T];
+
+    pub const S_AMBIGUITY: [Self; 2] = [Self::C, Self::G];
+    pub const Y_AMBIGUITY: [Self; 2] = Self::PYRIMIDINES;
+
+    pub const K_AMBIGUITY: [Self; 2] = [Self::G, Self::T];
+
+    pub const V_AMBIGUITY: [Self; 3] = [Self::A, Self::C, Self::G];
+    pub const H_AMBIGUITY: [Self; 3] = [Self::A, Self::C, Self::T];
+    pub const D_AMBIGUITY: [Self; 3] = [Self::A, Self::G, Self::T];
+    pub const B_AMBIGUITY: [Self; 3] = [Self::C, Self::G, Self::T];
+
     const fn ascii_pack_table() -> [u8; 128] {
         let mut pack_table = [255u8; 128];
 
