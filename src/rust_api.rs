@@ -243,9 +243,13 @@ impl TryFrom<&[u8]> for DnaSequence {
     type Error = TranslationError;
 
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        let mut vec = vec![Nucleotide::N; value.len()];
-        for (idx, &b) in value.iter().enumerate() {
-            vec[idx] = Nucleotide::try_from(b)?;
+        let mut vec = vec![];
+        vec.reserve(value.len());
+
+        for &b in value {
+            if b != b' ' {
+                vec.push(Nucleotide::try_from(b)?);
+            }
         }
         Ok(Self::new(vec))
     }
@@ -483,4 +487,17 @@ mod tests {
 
         assert_eq!(protein("antg").windows(10).next(), None);
     }
+
+    #[test]
+    fn test_empty_spaces() {
+        // this test will unwrap() if it can not parse the DNA
+        dna("gcantacctaangtnattag ");
+        dna("  gcantacctaangtnattag ");
+        dna(" gca ntac ctaangtnattag ");
+
+        protein("angtnattag ");
+        protein(" angtnattag ");
+        protein(" an  gtnattag ");
+    }
+
 }
