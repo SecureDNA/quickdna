@@ -1171,11 +1171,15 @@ mod tests {
     }
 
     #[test]
-    fn test_dna_invalid_dna_whitespace() {
-        assert_parse_err!(
+    fn test_dna_dna_whitespace() {
+        assert_parse!(
             ">Virus1\nAAAA \n",
             FastaParser::<DnaSequence>::strict(),
-            FastaParseError::ParseError(TranslationError::BadNucleotide(' '))
+            vec![FastaRecord {
+                header: "Virus1".to_string(),
+                contents: "AAAA".parse().unwrap(),
+                line_range: (1, 3),
+            }]
         );
     }
 
