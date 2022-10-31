@@ -303,7 +303,7 @@ mod tests {
         for c in 0_u8..128 {
             let c = char::from(c);
             let r = DnaSequence::from_str(&String::from(c));
-            if "aAtTcCgGmMrRwWsSyYkKvVhHdDbBnN".chars().any(|x| x == c) {
+            if "aAtTcCgGmMrRwWsSyYkKvVhHdDbBnN ".chars().any(|x| x == c) {
                 assert!(
                     r.is_ok(),
                     "{c:?} should be a valid nucleotide or ambiguity code"
@@ -499,5 +499,4 @@ mod tests {
         protein(" angtnattag ");
         protein(" an  gtnattag ");
     }
-
 }
