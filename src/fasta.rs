@@ -1153,6 +1153,29 @@ mod tests {
     }
 
     #[test]
+    fn test_dna_dna_whitespace() {
+        assert_parse!(
+            ">Virus1\nAAAA \n",
+            FastaParser::<DnaSequence>::strict(),
+            vec![FastaRecord {
+                header: "Virus1".to_string(),
+                contents: "AAAA".parse().unwrap(),
+                line_range: (1, 3),
+            }]
+        );
+
+        assert_parse!(
+            ">Virus1\n  AAAA\t\t\n",
+            FastaParser::<DnaSequence>::strict(),
+            vec![FastaRecord {
+                header: "Virus1".to_string(),
+                contents: "AAAA".parse().unwrap(),
+                line_range: (1, 3),
+            }]
+        );
+    }
+
+    #[test]
     fn test_dna_invalid_dna() {
         assert_parse_err!(
             ">Virus1\nAAAelephant",
@@ -1167,19 +1190,6 @@ mod tests {
             ">Virus1\nAAAA\n>Virus2\nAAAAelephant",
             FastaParser::<DnaSequence>::strict(),
             FastaParseError::ParseError(TranslationError::BadNucleotide('e'))
-        );
-    }
-
-    #[test]
-    fn test_dna_dna_whitespace() {
-        assert_parse!(
-            ">Virus1\nAAAA \n",
-            FastaParser::<DnaSequence>::strict(),
-            vec![FastaRecord {
-                header: "Virus1".to_string(),
-                contents: "AAAA".parse().unwrap(),
-                line_range: (1, 3),
-            }]
         );
     }
 
