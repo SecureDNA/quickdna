@@ -243,9 +243,13 @@ impl TryFrom<&[u8]> for DnaSequence {
     type Error = TranslationError;
 
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        let mut vec = vec![Nucleotide::N; value.len()];
-        for (idx, &b) in value.iter().enumerate() {
-            vec[idx] = Nucleotide::try_from(b)?;
+        let mut vec = vec![];
+        vec.reserve(value.len());
+
+        for &b in value {
+            if b != b' ' && b != b'\t' {
+                vec.push(Nucleotide::try_from(b)?);
+            }
         }
         Ok(Self::new(vec))
     }
@@ -299,15 +303,15 @@ mod tests {
         for c in 0_u8..128 {
             let c = char::from(c);
             let r = DnaSequence::from_str(&String::from(c));
-            if "aAtTcCgGmMrRwWsSyYkKvVhHdDbBnN".chars().any(|x| x == c) {
+            if "aAtTcCgGmMrRwWsSyYkKvVhHdDbBnN \t".chars().any(|x| x == c) {
                 assert!(
                     r.is_ok(),
-                    "{c:?} should be a valid nucleotide or ambiguity code"
+                    "{c:?} should be a valid nucleotide, ambiguity code, or allowed whitespace"
                 );
             } else {
                 assert!(
                     r.is_err(),
-                    "{c:?} should *not* be a valid nucleotide or ambiguity code"
+                    "{c:?} should *not* be a valid nucleotide, ambiguity code, or allowed whitespace"
                 );
             }
         }
@@ -482,5 +486,17 @@ mod tests {
         );
 
         assert_eq!(protein("antg").windows(10).next(), None);
+    }
+
+    #[test]
+    fn test_empty_spaces() {
+        // this test will unwrap() if it cannot parse the DNA
+        dna("gcantacctaangtnattag ");
+        dna("  gcantac\tctaangtnattag ");
+        dna(" gca ntac ctaangtnattag \t");
+
+        protein("angtnattag ");
+        protein(" angtnattag ");
+        protein(" an  gtnattag \t");
     }
 }
