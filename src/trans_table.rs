@@ -238,16 +238,18 @@ impl TryFrom<u8> for TranslationTable {
 pub fn reverse_complement_bytes<T: NucleotideLike>(
     dna: &[u8],
 ) -> Result<Vec<u8>, TranslationError> {
-    let results = dna
-        .iter()
-        .rev()
-        .map(|b| T::try_from(*b).map(|n| n.complement().to_ascii()));
-
-    // Rust nicely collects an iterator over Result<T, E> into Result<Vec<T>, E> stopping at the first Err:
-    // https://stackoverflow.com/q/63798662/257418
-    results.collect()
+    let mut v = vec![0u8; dna.len()];
+    for (i, &b) in dna.iter().enumerate() {
+        let n = T::try_from(b)?;
+        v[dna.len() - 1 - i] = n.complement().to_ascii();
+    }
+    Ok(v)
 }
 
+// Perf: it looks like .collect() gets great codegen here, but not when dealing
+// with Result as it would in `reverse_complement_bytes` above. Here, it beats
+// writing something like `let mut v = vec![T::default(), dna.len()];` which
+// wastes time doing a memset before filling the Vec.
 pub fn reverse_complement<T: NucleotideLike>(dna: &[T]) -> Vec<T> {
     dna.iter().rev().map(|n| n.complement()).collect()
 }
