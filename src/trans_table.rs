@@ -1,6 +1,6 @@
 use crate::{
     errors::TranslationError,
-    nucleotide::{Codon, CodonAmbiguous, Nucleotide, NucleotideAmbiguous, NucleotideLike},
+    nucleotide::{Codon, CodonAmbiguous, NucleotideAmbiguous, NucleotideLike},
 };
 
 /// Identifies a translation table for turning codons into amino acids.

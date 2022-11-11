@@ -292,10 +292,6 @@ mod tests {
         DnaSequence::from_str(dna).unwrap()
     }
 
-    fn dna_strict(dna: &str) -> DnaSequence<Nucleotide> {
-        DnaSequence::from_str(dna).unwrap()
-    }
-
     fn protein(aa: &str) -> ProteinSequence {
         ProteinSequence::from_str(aa).unwrap()
     }

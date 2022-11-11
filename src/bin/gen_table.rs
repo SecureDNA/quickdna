@@ -6,7 +6,7 @@ use std::fs;
 
 use quickdna::{
     trans_table::{CodonIdx, TranslationTable},
-    Codon, CodonAmbiguous, Nucleotide, NucleotideAmbiguous, NucleotideLike,
+    CodonAmbiguous, Nucleotide, NucleotideAmbiguous, NucleotideLike,
 };
 
 // via https://en.wikipedia.org/wiki/List_of_genetic_codes
