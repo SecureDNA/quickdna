@@ -209,6 +209,7 @@ impl NucleotideLike for NucleotideAmbiguous {
 impl TryFrom<NucleotideAmbiguous> for Nucleotide {
     type Error = TranslationError;
 
+    #[inline(always)]
     fn try_from(value: NucleotideAmbiguous) -> Result<Self, Self::Error> {
         match value {
             NucleotideAmbiguous::A => Ok(Self::A),
