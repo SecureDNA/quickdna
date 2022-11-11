@@ -73,7 +73,9 @@ fn _reverse_complement_strict(py: Python, dna: &PyBytes) -> PyResult<PyObject> {
 fn quickdna(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(_check_table, m)?)?;
     m.add_function(wrap_pyfunction!(_translate, m)?)?;
+    m.add_function(wrap_pyfunction!(_translate_strict, m)?)?;
     m.add_function(wrap_pyfunction!(_reverse_complement, m)?)?;
+    m.add_function(wrap_pyfunction!(_reverse_complement_strict, m)?)?;
 
     Ok(())
 }
