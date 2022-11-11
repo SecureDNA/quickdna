@@ -38,7 +38,7 @@ fn _translate(py: Python, table: u8, dna: &PyBytes) -> PyResult<PyObject> {
 /// The input string is validated to consist of unambiguous nucleotides (no IUPAC ambiguity codes).
 ///
 /// * `translate_strict(b"AAACCCTTTGGG")` returns `b"KPFG"`
-/// * `translate_strict(b"AAACCCTTTGGN")` throws an error.
+/// * `translate_strict(b"AAACCCTTTGGN")` is an error.
 #[pyfunction]
 fn _translate_strict(py: Python, table: u8, dna: &PyBytes) -> PyResult<PyObject> {
     let table = TranslationTable::try_from(table)?;
@@ -62,7 +62,7 @@ fn _reverse_complement(py: Python, dna: &PyBytes) -> PyResult<PyObject> {
 /// The input string is validated to consist of unambiguous nucleotides (no IUPAC ambiguity codes).
 ///
 /// * `reverse_complement_strict(b"AAAAAACCC")` returns `b"GGGTTTTTT"`
-/// * `reverse_complement_strict(b"AAAAAACCN")` throws an error.
+/// * `reverse_complement_strict(b"AAAAAACCN")` is an error.
 #[pyfunction]
 fn _reverse_complement_strict(py: Python, dna: &PyBytes) -> PyResult<PyObject> {
     let bytes = reverse_complement_bytes::<Nucleotide>(dna.as_bytes())?;

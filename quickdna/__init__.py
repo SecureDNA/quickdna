@@ -1,6 +1,6 @@
 import typing as ty
 
-from .quickdna import _translate, _reverse_complement  # type: ignore
+from .quickdna import _translate, _translate_strict, _reverse_complement, _reverse_complement_strict  # type: ignore
 
 T = ty.TypeVar("T", bound="BaseSequence")
 
@@ -102,22 +102,29 @@ class ProteinSequence(BaseSequence):
 
 class DnaSequence(BaseSequence):
     """
-    A DNA sequence is a sequence of A, T, C, G, or N (ambiguous) nucleotide ASCII bytes.
+    A DNA sequence is a sequence of A, T, C, G, or IUPAC nucleotide ambiguity code ASCII bytes.
     """
 
-    def translate(self, table: int = 1) -> ProteinSequence:
+    def translate(self, table: int = 1, strict: bool = False) -> ProteinSequence:
         """
         Translate a DNA sequence into a protein sequence, using the specified
         NCBI table ID.
 
         Raises ValueError if the table argument is invalid or any characters in
         this sequence are invalid nucleotides.
+
+        If `strict` is true, then the input must be all `ATCG`, with no
+        ambiguous nucleotides.
         """
 
-        seq = _translate(table, self._seq)
+        if strict:
+            seq = _translate_strict(table, self._seq)
+        else:
+            seq = _translate(table, self._seq)
+
         return ProteinSequence(seq)
 
-    def translate_self_frames(self, table: int = 1) -> ty.List[ProteinSequence]:
+    def translate_self_frames(self, table: int = 1, strict: bool = False) -> ty.List[ProteinSequence]:
         """
         Translate this DNA sequence into up to 3 protein sequences, one for each possible
         reading frame on this sense.
@@ -127,27 +134,30 @@ class DnaSequence(BaseSequence):
         and a sequence of length 2 has none.
 
         Can raise ValueError, see `self.translate()`
+
+        If `strict` is true, then the input must be all `ATCG`, with no
+        ambiguous nucleotides.
         """
 
         if len(self) >= 5:
             return [
-                self.translate(table),
-                self[1:].translate(table),
-                self[2:].translate(table),
+                self.translate(table, strict),
+                self[1:].translate(table, strict),
+                self[2:].translate(table, strict),
             ]
         elif len(self) == 4:
             return [
-                self.translate(table),
-                self[1:].translate(table),
+                self.translate(table, strict),
+                self[1:].translate(table, strict),
             ]
         elif len(self) == 3:
             return [
-                self.translate(table),
+                self.translate(table, strict),
             ]
         else:
             return []
 
-    def translate_all_frames(self, table: int = 1) -> ty.List[ProteinSequence]:
+    def translate_all_frames(self, table: int = 1, strict: bool = False) -> ty.List[ProteinSequence]:
         """
         Translate this DNA sequence into at most 6 protein sequences, one for each possible
         reading frame on this sense and the reverse complement.
@@ -157,21 +167,30 @@ class DnaSequence(BaseSequence):
         and a sequence of length 2 has none.
 
         Can raise ValueError, see `self.translate()`
+
+        If `strict` is true, then the input must be all `ATCG`, with no
+        ambiguous nucleotides.
         """
 
         return [
-            *self.translate_self_frames(table=table),
-            *self.reverse_complement().translate_self_frames(table=table),
+            *self.translate_self_frames(table=table, strict=strict),
+            *self.reverse_complement().translate_self_frames(table=table, strict=strict),
         ]
 
-    def reverse_complement(self) -> "DnaSequence":
+    def reverse_complement(self, strict: bool = False) -> "DnaSequence":
         """
         Takes the reverse complement of a DNA sequence.
 
         Raises ValueError if any character in this sequence is an invalid nucleotide.
+
+        If `strict` is true, then the input must be all `ATCG`, with no
+        ambiguous nucleotides.
         """
 
-        seq = _reverse_complement(self._seq)
+        if strict:
+            seq = _reverse_complement_strict(self._seq)
+        else:
+            seq = _reverse_complement(self._seq)
         return DnaSequence(seq)
 
 
