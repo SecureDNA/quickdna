@@ -114,7 +114,7 @@ class DnaSequence(BaseSequence):
         this sequence are invalid nucleotides.
 
         If `strict` is true, then the input must be all `ATCG`, with no
-        ambiguous nucleotides.
+        ambiguous nucleotides. Otherwise, a ValueError is raised.
         """
 
         if strict:
@@ -136,7 +136,7 @@ class DnaSequence(BaseSequence):
         Can raise ValueError, see `self.translate()`
 
         If `strict` is true, then the input must be all `ATCG`, with no
-        ambiguous nucleotides.
+        ambiguous nucleotides. Otherwise, a ValueError is raised.
         """
 
         if len(self) >= 5:
@@ -169,7 +169,7 @@ class DnaSequence(BaseSequence):
         Can raise ValueError, see `self.translate()`
 
         If `strict` is true, then the input must be all `ATCG`, with no
-        ambiguous nucleotides.
+        ambiguous nucleotides. Otherwise, a ValueError is raised.
         """
 
         return [
@@ -184,7 +184,7 @@ class DnaSequence(BaseSequence):
         Raises ValueError if any character in this sequence is an invalid nucleotide.
 
         If `strict` is true, then the input must be all `ATCG`, with no
-        ambiguous nucleotides.
+        ambiguous nucleotides. Otherwise, a ValueError is raised.
         """
 
         if strict:
