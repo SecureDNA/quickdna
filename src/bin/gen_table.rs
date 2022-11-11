@@ -2,7 +2,7 @@
 //! Should be run from the repository root.
 //! Translation table via Wikipedia.
 
-use std::fs;
+use std::{collections::HashSet, fs};
 
 use quickdna::{
     trans_table::{CodonIdx, TranslationTable},
@@ -82,8 +82,7 @@ fn ambiguous_codon_protein(
     table_idx: usize,
     translation_tables: &[u8; TranslationTable::LOOKUP_SIZE],
 ) -> u8 {
-    let mut seen_protein: Option<u8> = None;
-    let mut seen_any_ambiguity = false;
+    let mut seen_proteins: HashSet<u8> = HashSet::new();
 
     for &n1 in codon.0[0].possibilities() {
         for &n2 in codon.0[1].possibilities() {
@@ -92,22 +91,24 @@ fn ambiguous_codon_protein(
                 let candidate_protein =
                     translation_tables[table_idx * TranslationTable::CODONS_PER_TABLE + codon_idx];
 
-                if let Some(seen) = seen_protein {
-                    if seen != candidate_protein {
-                        return b'X';
-                    }
-                    seen_any_ambiguity = true;
-                } else {
-                    seen_protein = Some(candidate_protein);
+                seen_proteins.insert(candidate_protein);
+                if seen_proteins.len() >= 3 {
+                    return b'X';
                 }
             }
         }
     }
 
-    if !seen_any_ambiguity {
-        panic!("not an ambiguous codon: {}", codon);
+    let mut seen_vec: Vec<u8> = seen_proteins.into_iter().collect();
+    seen_vec.sort();
+
+    match seen_vec.as_slice() {
+        [single] => *single,
+        [b'D', b'N'] => b'B', // B = Asx = Asparagine or Aspartic acid
+        [b'E', b'Q'] => b'Z', // Z = Glx = Glutamine or Glutamic acid
+        [b'I', b'L'] => b'J', // J = Xle = Leucine or Isoleucine
+        _ => b'X',
     }
-    seen_protein.unwrap()
 }
 
 fn gen_translation_tables() -> [u8; TranslationTable::LOOKUP_SIZE] {
