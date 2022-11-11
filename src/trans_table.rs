@@ -1,53 +1,94 @@
 use crate::{
     errors::TranslationError,
-    nucleotide::{Codon, Nucleotide},
+    nucleotide::{Codon, CodonAmbiguous, Nucleotide, NucleotideAmbiguous, NucleotideLike},
 };
 
+/// Identifies a translation table for turning codons into amin acids.
+/// See: https://en.wikipedia.org/wiki/List_of_genetic_codes
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TranslationTable {
+    /// The standard code
     Ncbi1,
+    /// The vertebrate mitochondrial code
     Ncbi2,
+    /// The yeast mitochondrial code
     Ncbi3,
+    /// The mold, protozoan, and coelenterate mitochondrial code and the mycoplasma/spiroplasma code
     Ncbi4,
+    /// The invertebrate mitochondrial code
     Ncbi5,
+    /// The ciliate, dasycladacean and hexamita nuclear code
     Ncbi6,
+    /// The kinetoplast code; cf. table 4.
     Ncbi7,
+    /// Same as table 1.
     Ncbi8,
+    /// The echinoderm and flatworm mitochondrial code
     Ncbi9,
+    /// The euplotid nuclear code
     Ncbi10,
+    /// The bacterial, archaeal and plant plastid code
     Ncbi11,
+    /// The alternative yeast nuclear code
     Ncbi12,
+    /// The ascidian mitochondrial code
     Ncbi13,
+    /// The alternative flatworm mitochondrial code
     Ncbi14,
+    /// The Blepharisma nuclear code
     Ncbi15,
+    /// The chlorophycean mitochondrial code
     Ncbi16,
+
     // tables 17-20 are not assigned
+    /// The trematode mitochondrial code
     Ncbi21,
+    /// The Scenedesmus obliquus mitochondrial code
     Ncbi22,
+    /// The Thraustochytrium mitochondrial code
     Ncbi23,
+    /// The Pterobranchia mitochondrial code
     Ncbi24,
+    /// The candidate division SR1 and gracilibacteria code
     Ncbi25,
+    /// The Pachysolen tannophilus nuclear code
     Ncbi26,
+    /// The karyorelict nuclear code
     Ncbi27,
+    /// The Condylostoma nuclear code
     Ncbi28,
+    /// The Mesodinium nuclear code
     Ncbi29,
+    /// The Peritrich nuclear code
     Ncbi30,
+    /// The Blastocrithidia nuclear code
     Ncbi31,
+    /// The Balanophoraceae plastid code
     Ncbi32,
+    /// The Cephalodiscidae mitochondrial code
     Ncbi33,
 }
 
 #[repr(transparent)]
 pub struct CodonIdx(usize);
 
-impl From<[Nucleotide; 3]> for CodonIdx {
-    fn from(value: [Nucleotide; 3]) -> Self {
-        Self((value[0] as usize) << 6 | (value[1] as usize) << 3 | (value[2] as usize))
+impl<T: NucleotideLike> From<[T; 3]> for CodonIdx {
+    fn from(value: [T; 3]) -> Self {
+        let v0 = value[0].bits() as usize;
+        let v1 = value[1].bits() as usize;
+        let v2 = value[2].bits() as usize;
+        Self((v0 << 8) | (v1 << 4) | v2)
     }
 }
 
 impl From<Codon> for CodonIdx {
     fn from(c: Codon) -> Self {
+        c.0.into()
+    }
+}
+
+impl From<CodonAmbiguous> for CodonIdx {
+    fn from(c: CodonAmbiguous) -> Self {
         c.0.into()
     }
 }
@@ -59,9 +100,8 @@ impl From<CodonIdx> for usize {
 }
 
 impl TranslationTable {
-    /// There are really only 125 possible codons (len(ATCGN)^3), but since codons take up
-    /// 3 bits, the maximum codon value is 0b100100100, so we need some holes in the table.
-    pub const CODONS_PER_TABLE: usize = 293;
+    /// Each ambiguity code is represented by 4 bits, so there are (2^4)^3 codons per table.
+    pub const CODONS_PER_TABLE: usize = 1 << 12;
     // Number of NCBI translation tables (they go up to 33, but there's gaps in the numbering)
     pub const N_TRANS_TABLES: usize = 27;
     pub const LOOKUP_SIZE: usize = Self::CODONS_PER_TABLE * Self::N_TRANS_TABLES;
@@ -115,9 +155,9 @@ impl TranslationTable {
         // biopython also truncates, but warns -- generally I don't think we care,
         // so I just made it silently truncate
         for chunk in dna.chunks_exact(3) {
-            let a = chunk[0].try_into()?;
-            let b = chunk[1].try_into()?;
-            let c = chunk[2].try_into()?;
+            let a: NucleotideAmbiguous = chunk[0].try_into()?;
+            let b: NucleotideAmbiguous = chunk[1].try_into()?;
+            let c: NucleotideAmbiguous = chunk[2].try_into()?;
             let codon_idx = CodonIdx::from([a, b, c]);
             result.push(
                 Self::TRANSLATION_TABLES
@@ -128,7 +168,7 @@ impl TranslationTable {
         Ok(result)
     }
 
-    pub fn translate_dna(self, dna: &[Nucleotide]) -> Vec<u8> {
+    pub fn translate_dna<T: NucleotideLike>(self, dna: &[T]) -> Vec<u8> {
         if dna.is_empty() {
             return Vec::new();
         }
@@ -141,7 +181,7 @@ impl TranslationTable {
         // biopython also truncates, but warns -- generally I don't think we care,
         // so I just made it silently truncate
         for chunk in dna.chunks_exact(3) {
-            let sized_chunk: [Nucleotide; 3] = [chunk[0], chunk[1], chunk[2]];
+            let sized_chunk: [T; 3] = [chunk[0], chunk[1], chunk[2]];
             let codon_idx = CodonIdx::from(sized_chunk);
             result.push(
                 Self::TRANSLATION_TABLES
@@ -192,19 +232,19 @@ impl TryFrom<u8> for TranslationTable {
     }
 }
 
-pub fn reverse_complement_bytes(dna: &[u8]) -> Result<Vec<u8>, TranslationError> {
-    let mut v = vec![0u8; dna.len()];
-    for (i, &b) in dna.iter().enumerate() {
-        let n = Nucleotide::try_from(b)?;
-        v[dna.len() - 1 - i] = n.complement().to_ascii();
-    }
-    Ok(v)
+pub fn reverse_complement_bytes<T: NucleotideLike>(
+    dna: &[u8],
+) -> Result<Vec<u8>, TranslationError> {
+    let results = dna
+        .iter()
+        .rev()
+        .map(|b| T::try_from(*b).map(|n| n.complement().to_ascii()));
+
+    // Rust nicely collects an iterator over Result<T, E> into Result<Vec<T>, E> stopping at the first Err:
+    // https://stackoverflow.com/q/63798662/257418
+    results.collect()
 }
 
-pub fn reverse_complement(dna: &[Nucleotide]) -> Vec<Nucleotide> {
-    let mut v = vec![Nucleotide::N; dna.len()];
-    for (i, &n) in dna.iter().enumerate() {
-        v[dna.len() - 1 - i] = n.complement();
-    }
-    v
+pub fn reverse_complement<T: NucleotideLike>(dna: &[T]) -> Vec<T> {
+    dna.iter().rev().map(|n| n.complement()).collect()
 }

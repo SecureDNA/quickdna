@@ -5,7 +5,9 @@ use std::str::FromStr;
 use smallvec::SmallVec;
 
 pub use crate::errors::TranslationError;
-pub use crate::nucleotide::{Codon, Nucleotide};
+pub use crate::nucleotide::{
+    Codon, CodonAmbiguous, Nucleotide, NucleotideAmbiguous, NucleotideLike,
+};
 pub use crate::trans_table::TranslationTable;
 
 use crate::trans_table::reverse_complement;
@@ -134,13 +136,13 @@ impl FromStr for ProteinSequence {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, std::hash::Hash)]
-pub struct DnaSequence {
-    dna: Vec<Nucleotide>,
+pub struct DnaSequence<T: NucleotideLike> {
+    dna: Vec<T>,
 }
 
-impl DnaSequence {
+impl<T: NucleotideLike> DnaSequence<T> {
     /// Construct a new DnaSequence from a Vec of nucleotides
-    pub fn new(dna: Vec<Nucleotide>) -> Self {
+    pub fn new(dna: Vec<T>) -> Self {
         Self { dna }
     }
 
@@ -211,13 +213,13 @@ impl DnaSequence {
         self.dna.windows(length).map(|w| Self::new(w.to_vec()))
     }
 
-    pub fn push(&mut self, n: Nucleotide) {
+    pub fn push(&mut self, n: T) {
         self.dna.push(n);
     }
 }
 
-impl BaseSequence for DnaSequence {
-    type Item = Nucleotide;
+impl<T: NucleotideLike> BaseSequence for DnaSequence<T> {
+    type Item = T;
 
     fn as_slice(&self) -> &[Self::Item] {
         &self.dna
@@ -228,18 +230,20 @@ impl BaseSequence for DnaSequence {
     }
 }
 
-impls!(DnaSequence);
+impls!(DnaSequence<Nucleotide>);
+impls!(DnaSequence<NucleotideAmbiguous>);
 
-impl fmt::Display for DnaSequence {
+impl<T: NucleotideLike> fmt::Display for DnaSequence<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for &n in &self.dna {
-            f.write_char(n.into())?;
+            let u: u8 = n.into();
+            f.write_char(u.into())?;
         }
         Ok(())
     }
 }
 
-impl TryFrom<&[u8]> for DnaSequence {
+impl<T: NucleotideLike> TryFrom<&[u8]> for DnaSequence<T> {
     type Error = TranslationError;
 
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
@@ -248,14 +252,14 @@ impl TryFrom<&[u8]> for DnaSequence {
 
         for &b in value {
             if b != b' ' && b != b'\t' {
-                vec.push(Nucleotide::try_from(b)?);
+                vec.push(T::try_from(b)?);
             }
         }
         Ok(Self::new(vec))
     }
 }
 
-impl TryFrom<Vec<u8>> for DnaSequence {
+impl<T: NucleotideLike> TryFrom<Vec<u8>> for DnaSequence<T> {
     type Error = TranslationError;
 
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
@@ -263,7 +267,7 @@ impl TryFrom<Vec<u8>> for DnaSequence {
     }
 }
 
-impl FromStr for DnaSequence {
+impl<T: NucleotideLike> FromStr for DnaSequence<T> {
     type Err = TranslationError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -284,7 +288,11 @@ mod tests {
         };
     }
 
-    fn dna(dna: &str) -> DnaSequence {
+    fn dna(dna: &str) -> DnaSequence<NucleotideAmbiguous> {
+        DnaSequence::from_str(dna).unwrap()
+    }
+
+    fn dna_strict(dna: &str) -> DnaSequence<Nucleotide> {
         DnaSequence::from_str(dna).unwrap()
     }
 
@@ -302,7 +310,7 @@ mod tests {
     fn test_dna_parses() {
         for c in 0_u8..128 {
             let c = char::from(c);
-            let r = DnaSequence::from_str(&String::from(c));
+            let r = DnaSequence::<NucleotideAmbiguous>::from_str(&String::from(c));
             if "aAtTcCgGmMrRwWsSyYkKvVhHdDbBnN \t".chars().any(|x| x == c) {
                 assert!(
                     r.is_ok(),
@@ -318,10 +326,42 @@ mod tests {
     }
 
     #[test]
+    fn test_dna_parses_strict() {
+        for c in 0_u8..128 {
+            let c = char::from(c);
+            let r = DnaSequence::<Nucleotide>::from_str(&String::from(c));
+            if "aAtTcCgG \t".chars().any(|x| x == c) {
+                assert!(
+                    r.is_ok(),
+                    "{c:?} should be a valid nucleotide, or allowed whitespace"
+                );
+            } else {
+                assert!(
+                    r.is_err(),
+                    "{c:?} should *not* be a valid nucleotide, or allowed whitespace"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn test_translate() {
         assert_eq!(
             dna("AAAGGGAAA").translate(TranslationTable::Ncbi1),
             protein("KGK")
+        );
+    }
+
+    #[test]
+    fn test_translate_ambiguous() {
+        // R means "A or G" and both {TTA,TTG} map to L.
+        // Thus, "TTR" should map to L.
+        //
+        // But V means "A or G or C", and TTC maps to F.
+        // Thus, "TTV" is ambiguous and maps to X.
+        assert_eq!(
+            dna("TTR TTV").translate(TranslationTable::Ncbi1),
+            protein("LX")
         );
     }
 

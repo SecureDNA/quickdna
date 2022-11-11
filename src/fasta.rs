@@ -57,7 +57,7 @@ pub struct FastaParseSettings {
     ///         FastaRecord {
     ///             header: "b".to_string(),
     ///             contents: "...".to_string(),
-    ///             line_range: (2, 4),        
+    ///             line_range: (2, 4),
     ///         }
     ///     ],
     /// );
@@ -72,7 +72,7 @@ pub struct FastaParseSettings {
     ///             header: "a\nb".to_string(),
     ///             contents: "...".to_string(),
     ///             line_range: (1, 4),
-    ///         }  
+    ///         }
     ///     ],
     /// );
     /// ```
@@ -93,7 +93,7 @@ pub struct FastaParseSettings {
     ///         FastaRecord {
     ///             header: "a".to_string(),
     ///             contents: "sequence".to_string(),
-    ///             line_range: (2, 4),        
+    ///             line_range: (2, 4),
     ///         }
     ///     ]
     /// );
@@ -112,7 +112,7 @@ pub struct FastaParseSettings {
     ///         FastaRecord {
     ///             header: "a".to_string(),
     ///             contents: "sequence".to_string(),
-    ///             line_range: (2, 4),        
+    ///             line_range: (2, 4),
     ///         }
     ///     ]
     /// );
@@ -459,7 +459,7 @@ fn try_parse_header(line: &str) -> Option<&str> {
 mod tests {
     use super::*;
 
-    use crate::{DnaSequence, ProteinSequence, TranslationError};
+    use crate::{DnaSequence, Nucleotide, ProteinSequence, TranslationError};
     use std::time::Duration;
 
     macro_rules! assert_parse {
@@ -1123,7 +1123,7 @@ mod tests {
     fn test_dna_fasta() {
         assert_parse!(
             ">Virus1\nAAAA",
-            FastaParser::<DnaSequence>::strict(),
+            FastaParser::<DnaSequence<Nucleotide>>::strict(),
             vec![FastaRecord {
                 header: "Virus1".to_string(),
                 contents: "AAAA".parse().unwrap(),
@@ -1136,7 +1136,7 @@ mod tests {
     fn test_dna_fasta_multiple() {
         assert_parse!(
             ">Virus1\nAAAA\nAAAA\n>Virus2\nCCCC\nCCCC\n",
-            FastaParser::<DnaSequence>::strict(),
+            FastaParser::<DnaSequence<Nucleotide>>::strict(),
             vec![
                 FastaRecord {
                     header: "Virus1".to_string(),
@@ -1156,7 +1156,7 @@ mod tests {
     fn test_dna_dna_whitespace() {
         assert_parse!(
             ">Virus1\nAAAA \n",
-            FastaParser::<DnaSequence>::strict(),
+            FastaParser::<DnaSequence<Nucleotide>>::strict(),
             vec![FastaRecord {
                 header: "Virus1".to_string(),
                 contents: "AAAA".parse().unwrap(),
@@ -1166,7 +1166,7 @@ mod tests {
 
         assert_parse!(
             ">Virus1\n  AAAA\t\t\n",
-            FastaParser::<DnaSequence>::strict(),
+            FastaParser::<DnaSequence<Nucleotide>>::strict(),
             vec![FastaRecord {
                 header: "Virus1".to_string(),
                 contents: "AAAA".parse().unwrap(),
@@ -1179,7 +1179,7 @@ mod tests {
     fn test_dna_invalid_dna() {
         assert_parse_err!(
             ">Virus1\nAAAelephant",
-            FastaParser::<DnaSequence>::strict(),
+            FastaParser::<DnaSequence<Nucleotide>>::strict(),
             FastaParseError::ParseError(TranslationError::BadNucleotide('e'))
         );
     }
@@ -1188,7 +1188,7 @@ mod tests {
     fn test_dna_invalid_dna_multiple() {
         assert_parse_err!(
             ">Virus1\nAAAA\n>Virus2\nAAAAelephant",
-            FastaParser::<DnaSequence>::strict(),
+            FastaParser::<DnaSequence<Nucleotide>>::strict(),
             FastaParseError::ParseError(TranslationError::BadNucleotide('e'))
         );
     }
@@ -1197,7 +1197,7 @@ mod tests {
     fn test_dna_invalid_dna_unicode() {
         assert_parse_err!(
             ">Virus1\nAAčCCG\n",
-            FastaParser::<DnaSequence>::strict(),
+            FastaParser::<DnaSequence<Nucleotide>>::strict(),
             FastaParseError::ParseError(TranslationError::NonAsciiByte(196))
         );
     }
@@ -1239,7 +1239,7 @@ mod tests {
     fn test_duplicate_header_lines() {
         assert_parse!(
             ">Virus1\nAAAA\nAAAA\n>Virus1\nCCCC\nCCCC\n",
-            FastaParser::<DnaSequence>::strict(),
+            FastaParser::<DnaSequence<Nucleotide>>::strict(),
             vec![
                 FastaRecord {
                     header: "Virus1".to_string(),

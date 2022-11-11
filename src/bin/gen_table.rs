@@ -6,7 +6,7 @@ use std::fs;
 
 use quickdna::{
     trans_table::{CodonIdx, TranslationTable},
-    Codon, Nucleotide,
+    Codon, CodonAmbiguous, Nucleotide, NucleotideAmbiguous, NucleotideLike,
 };
 
 // via https://en.wikipedia.org/wiki/List_of_genetic_codes
@@ -77,47 +77,37 @@ GGA || G || G || G || G || G || G || G || G || G || G || G || G || G || G || G |
 GGG || G || G || G || G || G || G || G || G || G || G || G || G || G || G || G || G || G || G || G || G || G || G || G || G || G || G || G
 ";
 
-fn codon_first_n_index(codon: Codon) -> Option<usize> {
-    let codon: [Nucleotide; 3] = codon.into();
-    codon
-        .iter()
-        .enumerate()
-        .find_map(|(idx, &n)| if n == Nucleotide::N { Some(idx) } else { None })
-}
-
 fn ambiguous_codon_protein(
-    codon: Codon,
+    codon: CodonAmbiguous,
     table_idx: usize,
-    translation_tables: [u8; TranslationTable::LOOKUP_SIZE],
+    translation_tables: &[u8; TranslationTable::LOOKUP_SIZE],
 ) -> u8 {
-    match codon.count(Nucleotide::N) {
-        0 => panic!("not an ambigious codon: {}", codon),
-        1 => {
-            // try and see if all possible permutations of this codon map to the same protein
-            let mut seen_protein = None;
-            let n_index = codon_first_n_index(codon).unwrap();
+    let mut seen_protein: Option<u8> = None;
+    let mut seen_any_ambiguity = false;
 
-            for possible in [Nucleotide::A, Nucleotide::T, Nucleotide::C, Nucleotide::G] {
-                let mut candidate: [Nucleotide; 3] = codon.into();
-                candidate[n_index] = possible;
-                let codon_idx: usize = CodonIdx::from(candidate).into();
+    for &n1 in codon.0[0].possibilities() {
+        for &n2 in codon.0[1].possibilities() {
+            for &n3 in codon.0[2].possibilities() {
+                let codon_idx: usize = CodonIdx::from([n1, n2, n3]).into();
                 let candidate_protein =
                     translation_tables[table_idx * TranslationTable::CODONS_PER_TABLE + codon_idx];
 
-                match seen_protein {
-                    None => {
-                        seen_protein = Some(candidate_protein);
+                if let Some(seen) = seen_protein {
+                    if seen != candidate_protein {
+                        return b'X';
                     }
-                    Some(p) if p == candidate_protein => {}
-                    _ => return b'X',
+                    seen_any_ambiguity = true;
+                } else {
+                    seen_protein = Some(candidate_protein);
                 }
             }
-
-            seen_protein.unwrap()
         }
-        // all codons with 2 or more Ns always map to X
-        _ => b'X',
     }
+
+    if !seen_any_ambiguity {
+        panic!("not an ambiguous codon: {}", codon);
+    }
+    seen_protein.unwrap()
 }
 
 fn gen_translation_tables() -> [u8; TranslationTable::LOOKUP_SIZE] {
@@ -141,15 +131,16 @@ fn gen_translation_tables() -> [u8; TranslationTable::LOOKUP_SIZE] {
     }
 
     // setup ambiguous codons
-    for &a in Nucleotide::NUCLEOTIDES.iter() {
-        for &b in Nucleotide::NUCLEOTIDES.iter() {
-            for &c in Nucleotide::NUCLEOTIDES.iter() {
-                if a == Nucleotide::N || b == Nucleotide::N || c == Nucleotide::N {
-                    let codon = Codon([a, b, c]);
+    for a in NucleotideAmbiguous::ALL {
+        for b in NucleotideAmbiguous::ALL {
+            for c in NucleotideAmbiguous::ALL {
+                if a.is_ambiguous() || b.is_ambiguous() || c.is_ambiguous() {
+                    let codon = CodonAmbiguous([a, b, c]);
                     let codon_idx: usize = CodonIdx::from(codon).into();
 
                     for table_idx in 0..TranslationTable::N_TRANS_TABLES {
-                        let protein = ambiguous_codon_protein(codon, table_idx, translation_tables);
+                        let protein =
+                            ambiguous_codon_protein(codon, table_idx, &translation_tables);
                         translation_tables
                             [table_idx * TranslationTable::CODONS_PER_TABLE + codon_idx] = protein;
                     }
@@ -164,4 +155,5 @@ fn gen_translation_tables() -> [u8; TranslationTable::LOOKUP_SIZE] {
 fn main() {
     let tables = gen_translation_tables();
     fs::write("src/tables.dat", tables).expect("failed to write tables.dat");
+    println!("Wrote codon translation table data to src/tables.dat.");
 }

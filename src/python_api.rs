@@ -5,6 +5,7 @@ use pyo3::{exceptions::PyValueError, prelude::*, types::PyBytes};
 use crate::{
     errors::TranslationError,
     trans_table::{reverse_complement_bytes, TranslationTable},
+    NucleotideAmbiguous,
 };
 
 impl From<TranslationError> for PyErr {
@@ -28,7 +29,7 @@ fn _translate(py: Python, table: u8, dna: &PyBytes) -> PyResult<PyObject> {
 
 #[pyfunction]
 fn _reverse_complement(py: Python, dna: &PyBytes) -> PyResult<PyObject> {
-    let bytes = reverse_complement_bytes(dna.as_bytes())?;
+    let bytes = reverse_complement_bytes::<NucleotideAmbiguous>(dna.as_bytes())?;
     Ok(PyBytes::new(py, &bytes).into())
 }
 
