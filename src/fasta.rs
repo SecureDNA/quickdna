@@ -459,7 +459,7 @@ fn try_parse_header(line: &str) -> Option<&str> {
 mod tests {
     use super::*;
 
-    use crate::{DnaSequence, Nucleotide, ProteinSequence, TranslationError, NucleotideAmbiguous};
+    use crate::{DnaSequence, Nucleotide, NucleotideAmbiguous, ProteinSequence, TranslationError};
     use std::time::Duration;
 
     macro_rules! assert_parse {
