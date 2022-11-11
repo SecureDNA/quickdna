@@ -1,6 +1,6 @@
 use crate::{
     errors::TranslationError,
-    nucleotide::{Codon, CodonAmbiguous, NucleotideAmbiguous, NucleotideLike},
+    nucleotide::{Codon, CodonAmbiguous, NucleotideLike},
 };
 
 /// Identifies a translation table for turning codons into amino acids.
@@ -142,7 +142,10 @@ impl TranslationTable {
         }
     }
 
-    pub fn translate_dna_bytes(self, dna: &[u8]) -> Result<Vec<u8>, TranslationError> {
+    pub fn translate_dna_bytes<T: NucleotideLike>(
+        self,
+        dna: &[u8],
+    ) -> Result<Vec<u8>, TranslationError> {
         if dna.is_empty() {
             return Ok(Vec::new());
         }
@@ -155,9 +158,9 @@ impl TranslationTable {
         // biopython also truncates, but warns -- generally I don't think we care,
         // so I just made it silently truncate
         for chunk in dna.chunks_exact(3) {
-            let a: NucleotideAmbiguous = chunk[0].try_into()?;
-            let b: NucleotideAmbiguous = chunk[1].try_into()?;
-            let c: NucleotideAmbiguous = chunk[2].try_into()?;
+            let a: T = chunk[0].try_into()?;
+            let b: T = chunk[1].try_into()?;
+            let c: T = chunk[2].try_into()?;
             let codon_idx = CodonIdx::from([a, b, c]);
             result.push(
                 Self::TRANSLATION_TABLES
