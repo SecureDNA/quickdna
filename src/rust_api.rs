@@ -291,6 +291,10 @@ mod tests {
         DnaSequence::from_str(dna).unwrap()
     }
 
+    fn dna_strict(dna: &str) -> DnaSequence<Nucleotide> {
+        DnaSequence::from_str(dna).unwrap()
+    }
+
     fn protein(aa: &str) -> ProteinSequence {
         ProteinSequence::from_str(aa).unwrap()
     }
@@ -345,6 +349,10 @@ mod tests {
             dna("AAAGGGAAA").translate(TranslationTable::Ncbi1),
             protein("KGK")
         );
+        assert_eq!(
+            dna_strict("AAAGGGAAA").translate(TranslationTable::Ncbi1),
+            protein("KGK")
+        );
     }
 
     #[test]
@@ -365,6 +373,11 @@ mod tests {
         assert_eq_smallvec!(
             3,
             dna("AAAGGGAAA").translate_self_frames(TranslationTable::Ncbi1),
+            smallvec![protein("KGK"), protein("KG"), protein("RE"),]
+        );
+        assert_eq_smallvec!(
+            3,
+            dna_strict("AAAGGGAAA").translate_self_frames(TranslationTable::Ncbi1),
             smallvec![protein("KGK"), protein("KG"), protein("RE"),]
         );
     }
@@ -397,10 +410,49 @@ mod tests {
     }
 
     #[test]
+    fn test_short_translate_self_strict() {
+        assert_eq_smallvec!(
+            3,
+            dna_strict("GGGG").translate_self_frames(TranslationTable::Ncbi1),
+            smallvec![protein("G"), protein("G"),]
+        );
+
+        assert_eq_smallvec!(
+            3,
+            dna_strict("GGG").translate_self_frames(TranslationTable::Ncbi1),
+            smallvec![protein("G"),]
+        );
+
+        assert!(dna_strict("GG")
+            .translate_self_frames(TranslationTable::Ncbi1)
+            .is_empty());
+
+        assert!(dna_strict("G")
+            .translate_self_frames(TranslationTable::Ncbi1)
+            .is_empty());
+
+        assert!(dna_strict("")
+            .translate_self_frames(TranslationTable::Ncbi1)
+            .is_empty());
+    }
+
+    #[test]
     fn test_translate_all() {
         assert_eq_smallvec!(
             6,
             dna("AAAGGGAAA").translate_all_frames(TranslationTable::Ncbi1),
+            smallvec![
+                protein("KGK"),
+                protein("KG"),
+                protein("RE"),
+                protein("FPF"),
+                protein("FP"),
+                protein("SL"),
+            ]
+        );
+        assert_eq_smallvec!(
+            6,
+            dna_strict("AAAGGGAAA").translate_all_frames(TranslationTable::Ncbi1),
             smallvec![
                 protein("KGK"),
                 protein("KG"),
@@ -440,10 +492,47 @@ mod tests {
     }
 
     #[test]
+    fn test_short_translate_all_strict() {
+        assert_eq_smallvec!(
+            6,
+            dna_strict("GGGG").translate_all_frames(TranslationTable::Ncbi1),
+            smallvec![protein("G"), protein("G"), protein("P"), protein("P"),]
+        );
+
+        assert_eq_smallvec!(
+            6,
+            dna_strict("GGG").translate_all_frames(TranslationTable::Ncbi1),
+            smallvec![protein("G"), protein("P"),]
+        );
+
+        assert!(dna_strict("GG")
+            .translate_all_frames(TranslationTable::Ncbi1)
+            .is_empty());
+
+        assert!(dna_strict("G")
+            .translate_all_frames(TranslationTable::Ncbi1)
+            .is_empty());
+
+        assert!(dna_strict("")
+            .translate_all_frames(TranslationTable::Ncbi1)
+            .is_empty());
+    }
+
+    #[test]
     fn test_dna_equality() {
         let d1 = dna("aaa");
         let d2 = dna("aaa");
         let d3 = dna("aAa");
+
+        assert_eq!(d1, d2);
+        assert_eq!(d1, d3);
+    }
+
+    #[test]
+    fn test_dna_equality_strict() {
+        let d1 = dna_strict("aaa");
+        let d2 = dna_strict("aaa");
+        let d3 = dna_strict("aAa");
 
         assert_eq!(d1, d2);
         assert_eq!(d1, d3);
@@ -463,12 +552,32 @@ mod tests {
     fn test_protein_case() {
         assert_eq!(dna("GGG").translate(TranslationTable::Ncbi1), protein("g"));
         assert_eq!(dna("GGG").translate(TranslationTable::Ncbi1), protein("G"));
+        assert_eq!(
+            dna_strict("GGG").translate(TranslationTable::Ncbi1),
+            protein("g")
+        );
+        assert_eq!(
+            dna_strict("GGG").translate(TranslationTable::Ncbi1),
+            protein("G")
+        );
     }
 
     #[test]
     fn test_hash() {
         let d1 = dna("aaa");
         let d2 = dna("aaa");
+        let p1 = protein("aaa");
+        let p2 = protein("aaa");
+
+        assert_eq!(hash(&d1), hash(&d2));
+        assert!(hash(&d1) != hash(&p1));
+        assert_eq!(hash(&p1), hash(&p2));
+    }
+
+    #[test]
+    fn test_hash_strict() {
+        let d1 = dna_strict("aaa");
+        let d2 = dna_strict("aaa");
         let p1 = protein("aaa");
         let p2 = protein("aaa");
 
@@ -501,6 +610,29 @@ mod tests {
     }
 
     #[test]
+    fn test_dna_windows_strict() {
+        let d = dna_strict("gcactacctaacgtcattag");
+        assert_eq!(
+            d.windows(10).collect::<Vec<_>>(),
+            vec![
+                dna_strict("gcactaccta"),
+                dna_strict("cactacctaa"),
+                dna_strict("actacctaac"),
+                dna_strict("ctacctaacg"),
+                dna_strict("tacctaacgt"),
+                dna_strict("acctaacgtc"),
+                dna_strict("cctaacgtca"),
+                dna_strict("ctaacgtcat"),
+                dna_strict("taacgtcatt"),
+                dna_strict("aacgtcatta"),
+                dna_strict("acgtcattag"),
+            ]
+        );
+
+        assert_eq!(dna_strict("actg").windows(10).next(), None);
+    }
+
+    #[test]
     fn test_protein_windows() {
         let p = protein("gcantacctaangtnattag");
         assert_eq!(
@@ -529,6 +661,10 @@ mod tests {
         dna("gcantacctaangtnattag ");
         dna("  gcantac\tctaangtnattag ");
         dna(" gca ntac ctaangtnattag \t");
+
+        dna_strict("gcactacctaacgtcattag ");
+        dna_strict("  gcactac\tctaacgtcattag ");
+        dna_strict(" gca ctac ctaacgtcattag \t");
 
         protein("angtnattag ");
         protein(" angtnattag ");
