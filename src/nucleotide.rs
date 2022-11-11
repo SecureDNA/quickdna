@@ -38,7 +38,9 @@ pub enum NucleotideAmbiguous {
     N = Nucleotide::A as u8 | Nucleotide::T as u8 | Nucleotide::C as u8 | Nucleotide::G as u8,
 }
 
-pub trait NucleotideLike: Copy + Eq + Into<u8> + TryFrom<u8, Error = TranslationError> {
+pub trait NucleotideLike:
+    Copy + Eq + Into<u8> + Into<char> + TryFrom<u8, Error = TranslationError>
+{
     fn complement(self) -> Self;
     fn bits(self) -> u8;
     fn to_ascii(self) -> u8;

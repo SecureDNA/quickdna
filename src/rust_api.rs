@@ -236,8 +236,7 @@ impls!(DnaSequence<NucleotideAmbiguous>);
 impl<T: NucleotideLike> fmt::Display for DnaSequence<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for &n in &self.dna {
-            let u: u8 = n.into();
-            f.write_char(u.into())?;
+            f.write_char(n.into())?;
         }
         Ok(())
     }
