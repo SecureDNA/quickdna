@@ -354,11 +354,11 @@ mod tests {
 
     #[test]
     fn test_translate_ambiguous() {
-        // R means "A or G" and both {TTA,TTG} map to L.
+        // R means "A or G" and both {TTA,TTG} map to L (Leucine).
         // Thus, "TTR" should map to L.
         //
-        // But V means "A or G or C", and TTC maps to F.
-        // Thus, "TTV" is ambiguous and maps to X.
+        // But V means "A or G or C", and TTC maps to F (Phenylalanine).
+        // Thus, "TTV" is truly ambiguous and maps to X.
         assert_eq!(
             dna("TTR TTV").translate(TranslationTable::Ncbi1),
             protein("LX")
