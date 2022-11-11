@@ -1,3 +1,5 @@
+/dist
+/quickdna/*.pyd
 /target
 /.hypothesis
 /.vscode
