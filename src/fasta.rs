@@ -459,7 +459,7 @@ fn try_parse_header(line: &str) -> Option<&str> {
 mod tests {
     use super::*;
 
-    use crate::{DnaSequence, Nucleotide, ProteinSequence, TranslationError};
+    use crate::{DnaSequence, Nucleotide, ProteinSequence, TranslationError, NucleotideAmbiguous};
     use std::time::Duration;
 
     macro_rules! assert_parse {
@@ -1133,6 +1133,30 @@ mod tests {
     }
 
     #[test]
+    fn test_dna_fasta_ambiguous() {
+        assert_parse!(
+            ">Virus1\nABCD",
+            FastaParser::<DnaSequence<NucleotideAmbiguous>>::strict(),
+            vec![FastaRecord {
+                header: "Virus1".to_string(),
+                contents: "ABCD".parse().unwrap(),
+                line_range: (1, 3),
+            }]
+        );
+    }
+
+    #[test]
+    fn test_dna_fasta_strict() {
+        // Strict as in "when parsing Nucleotide, disallow ambiguity codes".
+        // No relation to the FastaParser `strict()` call.
+        assert_parse_err!(
+            ">Virus1\nABCD",
+            FastaParser::<DnaSequence<Nucleotide>>::strict(),
+            FastaParseError::ParseError(TranslationError::UnexpectedAmbiguousNucleotide('B'))
+        );
+    }
+
+    #[test]
     fn test_dna_fasta_multiple() {
         assert_parse!(
             ">Virus1\nAAAA\nAAAA\n>Virus2\nCCCC\nCCCC\n",
@@ -1146,6 +1170,22 @@ mod tests {
                 FastaRecord {
                     header: "Virus2".to_string(),
                     contents: "CCCCCCCC".parse().unwrap(),
+                    line_range: (4, 7),
+                },
+            ]
+        );
+        assert_parse!(
+            ">Virus1\nAAAA\nAAAA\n>Virus2\nCCCC\nRRRR\n",
+            FastaParser::<DnaSequence<NucleotideAmbiguous>>::strict(),
+            vec![
+                FastaRecord {
+                    header: "Virus1".to_string(),
+                    contents: "AAAAAAAA".parse().unwrap(),
+                    line_range: (1, 4),
+                },
+                FastaRecord {
+                    header: "Virus2".to_string(),
+                    contents: "CCCCRRRR".parse().unwrap(),
                     line_range: (4, 7),
                 },
             ]
@@ -1165,11 +1205,11 @@ mod tests {
         );
 
         assert_parse!(
-            ">Virus1\n  AAAA\t\t\n",
-            FastaParser::<DnaSequence<Nucleotide>>::strict(),
+            ">Virus1\n  AAAA\tBCD \t\n",
+            FastaParser::<DnaSequence<NucleotideAmbiguous>>::strict(),
             vec![FastaRecord {
                 header: "Virus1".to_string(),
-                contents: "AAAA".parse().unwrap(),
+                contents: "AAAABCD".parse().unwrap(),
                 line_range: (1, 3),
             }]
         );
@@ -1182,6 +1222,11 @@ mod tests {
             FastaParser::<DnaSequence<Nucleotide>>::strict(),
             FastaParseError::ParseError(TranslationError::BadNucleotide('e'))
         );
+        assert_parse_err!(
+            ">Virus1\nAAAelephant",
+            FastaParser::<DnaSequence<NucleotideAmbiguous>>::strict(),
+            FastaParseError::ParseError(TranslationError::BadNucleotide('e'))
+        );
     }
 
     #[test]
@@ -1191,6 +1236,11 @@ mod tests {
             FastaParser::<DnaSequence<Nucleotide>>::strict(),
             FastaParseError::ParseError(TranslationError::BadNucleotide('e'))
         );
+        assert_parse_err!(
+            ">Virus1\nAAAA\n>Virus2\nAAAAelephant",
+            FastaParser::<DnaSequence<NucleotideAmbiguous>>::strict(),
+            FastaParseError::ParseError(TranslationError::BadNucleotide('e'))
+        );
     }
 
     #[test]
@@ -1198,6 +1248,11 @@ mod tests {
         assert_parse_err!(
             ">Virus1\nAAčCCG\n",
             FastaParser::<DnaSequence<Nucleotide>>::strict(),
+            FastaParseError::ParseError(TranslationError::NonAsciiByte(196))
+        );
+        assert_parse_err!(
+            ">Virus1\nAAčCCG\n",
+            FastaParser::<DnaSequence<NucleotideAmbiguous>>::strict(),
             FastaParseError::ParseError(TranslationError::NonAsciiByte(196))
         );
     }
