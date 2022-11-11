@@ -45,13 +45,17 @@ pub trait NucleotideLike: Copy + Eq + Into<u8> + TryFrom<u8, Error = Translation
     fn is_ambiguous(self) -> bool;
 }
 
-const fn ascii_to_nucleotide_table() -> [u8; 256] {
-    let mut pack_table = [0u8; 256];
+const fn ascii_to_nucleotide_table() -> [Option<NucleotideAmbiguous>; 256] {
+    // PERF: This was previously a 128-byte array, with "high" bytes eliminated
+    // by a separate check. But extending it to 256 elements makes Rust realize
+    // it's safe to index with any u8-cast-to-usize and eliminate a bounds check
+    // from the generated code.
+    let mut pack_table = [None; 256];
 
     macro_rules! insert {
         ($chr:literal, $variant:expr) => {
-            pack_table[$chr.to_ascii_uppercase() as usize] = $variant as u8;
-            pack_table[$chr.to_ascii_lowercase() as usize] = $variant as u8;
+            pack_table[$chr.to_ascii_uppercase() as usize] = Some($variant);
+            pack_table[$chr.to_ascii_lowercase() as usize] = Some($variant);
         };
     }
 
@@ -76,7 +80,7 @@ const fn ascii_to_nucleotide_table() -> [u8; 256] {
     pack_table
 }
 
-const ASCII_TO_NUCLEOTIDE: [u8; 256] = ascii_to_nucleotide_table();
+const ASCII_TO_NUCLEOTIDE: [Option<NucleotideAmbiguous>; 256] = ascii_to_nucleotide_table();
 
 impl Nucleotide {
     pub const ALL: [Self; 4] = [Self::A, Self::T, Self::C, Self::G];
@@ -202,6 +206,22 @@ impl NucleotideLike for NucleotideAmbiguous {
     }
 }
 
+impl TryFrom<NucleotideAmbiguous> for Nucleotide {
+    type Error = TranslationError;
+
+    fn try_from(value: NucleotideAmbiguous) -> Result<Self, Self::Error> {
+        match value {
+            NucleotideAmbiguous::A => Ok(Self::A),
+            NucleotideAmbiguous::T => Ok(Self::T),
+            NucleotideAmbiguous::C => Ok(Self::C),
+            NucleotideAmbiguous::G => Ok(Self::G),
+            other => Err(TranslationError::UnexpectedAmbiguousNucleotide(
+                other.into(),
+            )),
+        }
+    }
+}
+
 impl TryFrom<u8> for Nucleotide {
     type Error = TranslationError;
 
@@ -211,15 +231,9 @@ impl TryFrom<u8> for Nucleotide {
             return Err(TranslationError::NonAsciiByte(u));
         }
 
-        let v = ASCII_TO_NUCLEOTIDE[u as usize];
-        if v == 0 {
-            return Err(TranslationError::BadNucleotide(u.into()));
-        }
-
-        if v.count_ones() == 1 {
-            Ok(unsafe { std::mem::transmute(v) })
-        } else {
-            Err(TranslationError::UnexpectedAmbiguousNucleotide(u.into()))
+        match ASCII_TO_NUCLEOTIDE[u as usize] {
+            Some(na) => Nucleotide::try_from(na),
+            None => Err(TranslationError::BadNucleotide(u.into())),
         }
     }
 }
@@ -233,12 +247,10 @@ impl TryFrom<u8> for NucleotideAmbiguous {
             return Err(TranslationError::NonAsciiByte(u));
         }
 
-        let v = ASCII_TO_NUCLEOTIDE[u as usize];
-        if v == 0 {
-            return Err(TranslationError::BadNucleotide(u.into()));
+        match ASCII_TO_NUCLEOTIDE[u as usize] {
+            Some(na) => Ok(na),
+            None => Err(TranslationError::BadNucleotide(u.into())),
         }
-
-        Ok(unsafe { std::mem::transmute(v) })
     }
 }
 
