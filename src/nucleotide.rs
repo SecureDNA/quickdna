@@ -208,6 +208,18 @@ impl NucleotideLike for NucleotideAmbiguous {
     }
 }
 
+impl From<Nucleotide> for NucleotideAmbiguous {
+    #[inline(always)]
+    fn from(value: Nucleotide) -> Self {
+        match value {
+            Nucleotide::A => Self::A,
+            Nucleotide::T => Self::T,
+            Nucleotide::C => Self::C,
+            Nucleotide::G => Self::G,
+        }
+    }
+}
+
 impl TryFrom<NucleotideAmbiguous> for Nucleotide {
     type Error = TranslationError;
 
