@@ -42,5 +42,5 @@ clippy:
 black:
     poetry run black --check .
 
-pytest:
-    poetry run pytest . --junitxml=test-results.xml -v
+pytest: develop
+    poetry run pytest
