@@ -6,6 +6,8 @@ Quickdna is a simple, fast library for working with DNA sequences. It is up to 1
 translation tasks, in part because it uses a native Rust module (via PyO3) for the translation. However, it exposes
 an easy-to-use, type-annotated API that should still feel familiar for Biopython users.
 
+⚠ *Quickdna is "pre-1.0" software. Its API is still evolving. For now, if you're interested in using quickdna, we suggest you depend on an [exact version](https://python-poetry.org/docs/dependency-specification/#exact-requirements) or [git `rev`](https://python-poetry.org/docs/dependency-specification/#git-dependencies), so that new releases don't break your code.*
+
 ```python
 # These are the two main library types. Unlike Biopython, DnaSequence and
 # ProteinSequence are distinct, though they share a common BaseSequence base class
@@ -55,12 +57,20 @@ ProteinSequence(seq='WLNSLD'), ProteinSequence(seq='G*IVLI'))
 # There is a similar method, `translate_self_frames`, that only returns the
 # (up to 3) translated frames for this direction, without the reverse complement
 
-# The IUPAC ambiguity code 'N' is supported as well.
+# The IUPAC ambiguity codes are supported as well.
 # Codons with N will translate to a specific amino acid if it is unambiguous,
 # such as GGN -> G, or the ambiguous amino acid code 'X' if there are multiple
 # possible translations.
 >>> DnaSequence("GGNATN").translate()
 ProteinSequence(seq='GX')
+
+# The fine-grained ambiguity codes like "R = A or G" are accepted too, and
+# translation results are the same as Biopython. In the output, amino acid
+# ambiguity code 'B' means "either asparagine or aspartic acid" (N or D).
+>>> DnaSequence("RAT").translate()
+ProteinSequence(seq='B')
+
+# To disallow ambiguity codes in translation, try: `.translate(strict=True)`
 ```
 
 ## Benchmarks
@@ -91,10 +101,6 @@ reverse_complement_biopython(covid_genome) | 0.02928ms / iter | 121.55%
   * It's not yet 1.0 -- the API is liable to change in the future.
   * It doesn't support reading FASTA files or many of the other tasks Biopython can do,
     so you'll probably end up still using Biopython or something else to do those tasks.
-  * It doesn't support the (rarer) IUPAC ambiguity codes like B for non-A nucleotides,
-    instead only supporting the general N ambiguity code.
-      * If support for these codes is important to you, please make an issue! It may be possible
-        to support them, it just isn't a priority right now.
 
 ## Installation
 

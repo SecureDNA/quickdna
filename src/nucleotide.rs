@@ -2,23 +2,90 @@ use std::fmt::{self, Write};
 
 use crate::errors::TranslationError;
 
-/// A DNA nucleotide, or the IUPAC ambiguity code 'N'.
+/// A DNA nucleotide.
 ///
-/// Sorts in ATCGN order, not alphabetical.
+/// Sorts in ATCG order, not alphabetical.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, std::hash::Hash)]
 #[repr(u8)]
 pub enum Nucleotide {
-    A = 0,
-    T = 1,
-    C = 2,
-    G = 3,
-    /// IUPAC ambiguity code
-    N = 4,
+    A = 0b0001,
+    T = 0b0010,
+    C = 0b0100,
+    G = 0b1000,
 }
 
+/// A DNA nucleotide, or an IUPAC ambiguity code representing a set of possible nucleotides.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, std::hash::Hash)]
+#[repr(u8)]
+pub enum NucleotideAmbiguous {
+    A = Nucleotide::A as u8,
+    T = Nucleotide::T as u8,
+    C = Nucleotide::C as u8,
+    G = Nucleotide::G as u8,
+
+    W = Nucleotide::A as u8 | Nucleotide::T as u8,
+    M = Nucleotide::A as u8 | Nucleotide::C as u8,
+    R = Nucleotide::A as u8 | Nucleotide::G as u8, // purines
+    Y = Nucleotide::T as u8 | Nucleotide::C as u8, // pyrimidines
+    S = Nucleotide::C as u8 | Nucleotide::G as u8,
+    K = Nucleotide::T as u8 | Nucleotide::G as u8,
+
+    B = Nucleotide::T as u8 | Nucleotide::C as u8 | Nucleotide::G as u8, // not A
+    V = Nucleotide::A as u8 | Nucleotide::C as u8 | Nucleotide::G as u8, // not T
+    D = Nucleotide::A as u8 | Nucleotide::T as u8 | Nucleotide::G as u8, // not C
+    H = Nucleotide::A as u8 | Nucleotide::T as u8 | Nucleotide::C as u8, // not G
+
+    N = Nucleotide::A as u8 | Nucleotide::T as u8 | Nucleotide::C as u8 | Nucleotide::G as u8,
+}
+
+pub trait NucleotideLike:
+    Copy + Eq + Into<u8> + Into<char> + TryFrom<u8, Error = TranslationError>
+{
+    fn complement(self) -> Self;
+    fn bits(self) -> u8;
+    fn to_ascii(self) -> u8;
+    fn is_ambiguous(self) -> bool;
+}
+
+const fn ascii_to_nucleotide_table() -> [Option<NucleotideAmbiguous>; 256] {
+    // PERF: This was previously a 128-byte array, with "high" bytes eliminated
+    // by a separate check. But extending it to 256 elements makes Rust realize
+    // it's safe to index with any u8-cast-to-usize and eliminate a bounds check
+    // from the generated code.
+    let mut pack_table = [None; 256];
+
+    macro_rules! insert {
+        ($chr:literal, $variant:expr) => {
+            pack_table[$chr.to_ascii_uppercase() as usize] = Some($variant);
+            pack_table[$chr.to_ascii_lowercase() as usize] = Some($variant);
+        };
+    }
+
+    insert!(b'a', NucleotideAmbiguous::A);
+    insert!(b't', NucleotideAmbiguous::T);
+    insert!(b'c', NucleotideAmbiguous::C);
+    insert!(b'g', NucleotideAmbiguous::G);
+
+    // ambiguity codes
+    insert!(b'n', NucleotideAmbiguous::N); // A, T, C, or G (complement N)
+    insert!(b'm', NucleotideAmbiguous::M); // A or C (complement K)
+    insert!(b'r', NucleotideAmbiguous::R); // A or G (complement Y)
+    insert!(b'w', NucleotideAmbiguous::W); // A or T (complement W, itself)
+    insert!(b's', NucleotideAmbiguous::S); // C or G (complement S, itself)
+    insert!(b'y', NucleotideAmbiguous::Y); // C or T (complement R)
+    insert!(b'k', NucleotideAmbiguous::K); // G or T (complement M)
+    insert!(b'v', NucleotideAmbiguous::V); // A, C or G (complement B)
+    insert!(b'h', NucleotideAmbiguous::H); // A, C or T (complement D)
+    insert!(b'd', NucleotideAmbiguous::D); // A, G or T (complement H)
+    insert!(b'b', NucleotideAmbiguous::B); // C, G or T (complement V)
+
+    pack_table
+}
+
+const ASCII_TO_NUCLEOTIDE: [Option<NucleotideAmbiguous>; 256] = ascii_to_nucleotide_table();
+
 impl Nucleotide {
-    pub const NUCLEOTIDES: [Self; 5] = [Self::A, Self::T, Self::C, Self::G, Self::N];
-    const N_NUCLEOTIDES: u8 = Self::NUCLEOTIDES.len() as u8;
+    pub const ALL: [Self; 4] = [Self::A, Self::T, Self::C, Self::G];
 
     pub const PURINES: [Self; 2] = [Self::A, Self::G];
     pub const PYRIMIDINES: [Self; 2] = [Self::C, Self::T];
@@ -26,59 +93,160 @@ impl Nucleotide {
     pub const M_AMBIGUITY: [Self; 2] = [Self::A, Self::C];
     pub const R_AMBIGUITY: [Self; 2] = Self::PURINES;
     pub const W_AMBIGUITY: [Self; 2] = [Self::A, Self::T];
-
     pub const S_AMBIGUITY: [Self; 2] = [Self::C, Self::G];
     pub const Y_AMBIGUITY: [Self; 2] = Self::PYRIMIDINES;
-
     pub const K_AMBIGUITY: [Self; 2] = [Self::G, Self::T];
 
     pub const V_AMBIGUITY: [Self; 3] = [Self::A, Self::C, Self::G];
     pub const H_AMBIGUITY: [Self; 3] = [Self::A, Self::C, Self::T];
     pub const D_AMBIGUITY: [Self; 3] = [Self::A, Self::G, Self::T];
     pub const B_AMBIGUITY: [Self; 3] = [Self::C, Self::G, Self::T];
+}
 
-    const fn ascii_pack_table() -> [u8; 128] {
-        let mut pack_table = [255u8; 128];
-
-        macro_rules! insert {
-            ($chr:literal, $variant:expr) => {
-                pack_table[$chr.to_ascii_uppercase() as usize] = $variant as u8;
-                pack_table[$chr.to_ascii_lowercase() as usize] = $variant as u8;
-            };
+impl NucleotideLike for Nucleotide {
+    fn complement(self) -> Self {
+        match self {
+            Self::A => Self::T,
+            Self::T => Self::A,
+            Self::C => Self::G,
+            Self::G => Self::C,
         }
-
-        insert!(b'a', Self::A);
-        insert!(b't', Self::T);
-        insert!(b'c', Self::C);
-        insert!(b'g', Self::G);
-
-        // ambiguity codes (all mapped to N for now)
-        insert!(b'n', Self::N); // A, T, C, or G (complement N)
-        insert!(b'm', Self::N); // A or C (complement K)
-        insert!(b'r', Self::N); // A or G (complement Y)
-        insert!(b'w', Self::N); // A or T (complement W (self))
-        insert!(b's', Self::N); // C or G (complement S (self))
-        insert!(b'y', Self::N); // C or T (complement R)
-        insert!(b'k', Self::N); // G or T (complement M)
-        insert!(b'v', Self::N); // A, C or G (complement B)
-        insert!(b'h', Self::N); // A, C or T (complement D)
-        insert!(b'd', Self::N); // A, G or T (complement H)
-        insert!(b'b', Self::N); // C, G or T (complement V)
-
-        pack_table
     }
 
-    const ASCII_PACK_TABLE: [u8; 128] = Self::ascii_pack_table();
-
-    const COMPLEMENT_TABLE: [Self; Self::N_NUCLEOTIDES as usize] =
-        [Self::T, Self::A, Self::G, Self::C, Self::N];
-    pub const fn complement(self) -> Self {
-        Self::COMPLEMENT_TABLE[self as u8 as usize]
+    fn bits(self) -> u8 {
+        self as u8
     }
 
-    const ASCII_MAP: [u8; Self::N_NUCLEOTIDES as usize] = [b'A', b'T', b'C', b'G', b'N'];
-    pub const fn to_ascii(self) -> u8 {
-        Self::ASCII_MAP[self as usize]
+    fn to_ascii(self) -> u8 {
+        match self {
+            Self::A => b'A',
+            Self::T => b'T',
+            Self::C => b'C',
+            Self::G => b'G',
+        }
+    }
+
+    fn is_ambiguous(self) -> bool {
+        false
+    }
+}
+
+impl NucleotideAmbiguous {
+    pub const ALL: [Self; 15] = [
+        Self::A,
+        Self::T,
+        Self::W,
+        Self::C,
+        Self::M,
+        Self::Y,
+        Self::H,
+        Self::G,
+        Self::R,
+        Self::K,
+        Self::D,
+        Self::S,
+        Self::V,
+        Self::B,
+        Self::N,
+    ];
+
+    pub const fn possibilities(self) -> &'static [Nucleotide] {
+        match self {
+            Self::A => &[Nucleotide::A],
+            Self::T => &[Nucleotide::T],
+            Self::C => &[Nucleotide::C],
+            Self::G => &[Nucleotide::G],
+            Self::W => &[Nucleotide::A, Nucleotide::T],
+            Self::M => &[Nucleotide::A, Nucleotide::C],
+            Self::R => &[Nucleotide::A, Nucleotide::G],
+            Self::Y => &[Nucleotide::T, Nucleotide::C],
+            Self::S => &[Nucleotide::C, Nucleotide::G],
+            Self::K => &[Nucleotide::T, Nucleotide::G],
+            Self::B => &[Nucleotide::T, Nucleotide::C, Nucleotide::G],
+            Self::V => &[Nucleotide::A, Nucleotide::C, Nucleotide::G],
+            Self::D => &[Nucleotide::A, Nucleotide::T, Nucleotide::G],
+            Self::H => &[Nucleotide::A, Nucleotide::T, Nucleotide::C],
+            Self::N => &[Nucleotide::A, Nucleotide::T, Nucleotide::C, Nucleotide::G],
+        }
+    }
+}
+
+impl NucleotideLike for NucleotideAmbiguous {
+    fn complement(self) -> Self {
+        match self {
+            Self::A => Self::T,
+            Self::T => Self::A,
+            Self::W => Self::W,
+            Self::C => Self::G,
+            Self::M => Self::K,
+            Self::Y => Self::R,
+            Self::H => Self::D,
+            Self::G => Self::C,
+            Self::R => Self::Y,
+            Self::K => Self::M,
+            Self::D => Self::H,
+            Self::S => Self::S,
+            Self::V => Self::B,
+            Self::B => Self::V,
+            Self::N => Self::N,
+        }
+    }
+
+    fn bits(self) -> u8 {
+        self as u8
+    }
+
+    fn to_ascii(self) -> u8 {
+        match self {
+            Self::A => b'A',
+            Self::T => b'T',
+            Self::W => b'W',
+            Self::C => b'C',
+            Self::M => b'M',
+            Self::Y => b'Y',
+            Self::H => b'H',
+            Self::G => b'G',
+            Self::R => b'R',
+            Self::K => b'K',
+            Self::D => b'D',
+            Self::S => b'S',
+            Self::V => b'V',
+            Self::B => b'B',
+            Self::N => b'N',
+        }
+    }
+
+    fn is_ambiguous(self) -> bool {
+        (self as usize).count_ones() > 1
+    }
+}
+
+impl From<Nucleotide> for NucleotideAmbiguous {
+    #[inline(always)]
+    fn from(value: Nucleotide) -> Self {
+        match value {
+            Nucleotide::A => Self::A,
+            Nucleotide::T => Self::T,
+            Nucleotide::C => Self::C,
+            Nucleotide::G => Self::G,
+        }
+    }
+}
+
+impl TryFrom<NucleotideAmbiguous> for Nucleotide {
+    type Error = TranslationError;
+
+    #[inline(always)]
+    fn try_from(value: NucleotideAmbiguous) -> Result<Self, Self::Error> {
+        match value {
+            NucleotideAmbiguous::A => Ok(Self::A),
+            NucleotideAmbiguous::T => Ok(Self::T),
+            NucleotideAmbiguous::C => Ok(Self::C),
+            NucleotideAmbiguous::G => Ok(Self::G),
+            other => Err(TranslationError::UnexpectedAmbiguousNucleotide(
+                other.into(),
+            )),
+        }
     }
 }
 
@@ -87,17 +255,29 @@ impl TryFrom<u8> for Nucleotide {
 
     #[inline(always)]
     fn try_from(u: u8) -> Result<Self, Self::Error> {
-        if u < 128 {
-            let v = Self::ASCII_PACK_TABLE[u as usize];
-            if v < Self::N_NUCLEOTIDES {
-                // SAFETY: there are only X variants, with assigned numbers, so 0..=(X - 1)
-                //         are valid reprs of this type
-                Ok(unsafe { std::mem::transmute(v) })
-            } else {
-                Err(TranslationError::BadNucleotide(u.into()))
-            }
-        } else {
-            Err(TranslationError::NonAsciiByte(u))
+        if u >= 128 {
+            return Err(TranslationError::NonAsciiByte(u));
+        }
+
+        match ASCII_TO_NUCLEOTIDE[u as usize] {
+            Some(na) => Nucleotide::try_from(na),
+            None => Err(TranslationError::BadNucleotide(u.into())),
+        }
+    }
+}
+
+impl TryFrom<u8> for NucleotideAmbiguous {
+    type Error = TranslationError;
+
+    #[inline(always)]
+    fn try_from(u: u8) -> Result<Self, Self::Error> {
+        if u >= 128 {
+            return Err(TranslationError::NonAsciiByte(u));
+        }
+
+        match ASCII_TO_NUCLEOTIDE[u as usize] {
+            Some(na) => Ok(na),
+            None => Err(TranslationError::BadNucleotide(u.into())),
         }
     }
 }
@@ -114,7 +294,25 @@ impl From<Nucleotide> for char {
     }
 }
 
+impl From<NucleotideAmbiguous> for u8 {
+    fn from(n: NucleotideAmbiguous) -> Self {
+        n.to_ascii()
+    }
+}
+
+impl From<NucleotideAmbiguous> for char {
+    fn from(n: NucleotideAmbiguous) -> Self {
+        n.to_ascii() as char
+    }
+}
+
 impl fmt::Display for Nucleotide {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_char((*self).into())
+    }
+}
+
+impl fmt::Display for NucleotideAmbiguous {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_char((*self).into())
     }
@@ -122,37 +320,6 @@ impl fmt::Display for Nucleotide {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, std::hash::Hash)]
 pub struct Codon(pub [Nucleotide; 3]);
-
-impl Codon {
-    /// How many of the specified nucleotide this codon includes
-    pub fn count(&self, n: Nucleotide) -> usize {
-        let mut count = 0;
-        if self.0[0] == n {
-            count += 1
-        }
-        if self.0[1] == n {
-            count += 1
-        }
-        if self.0[2] == n {
-            count += 1
-        }
-        count
-    }
-
-    /// Whether the codon includes `N`
-    pub fn is_ambiguous(&self) -> bool {
-        self.count(Nucleotide::N) > 0
-    }
-
-    /// Returns an iterator of all codons, including ambiguous codons with `N`
-    pub fn all_codons() -> impl Iterator<Item = Self> {
-        const N: [Nucleotide; 5] = Nucleotide::NUCLEOTIDES;
-        N.iter().flat_map(move |&a| {
-            N.iter()
-                .flat_map(move |&b| N.iter().map(move |&c| Codon([a, b, c])))
-        })
-    }
-}
 
 impl TryFrom<[u8; 3]> for Codon {
     type Error = TranslationError;
@@ -175,5 +342,45 @@ impl From<Codon> for [Nucleotide; 3] {
 impl fmt::Display for Codon {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}{}{}", self.0[0], self.0[1], self.0[2])
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, std::hash::Hash)]
+pub struct CodonAmbiguous(pub [NucleotideAmbiguous; 3]);
+
+impl TryFrom<[u8; 3]> for CodonAmbiguous {
+    type Error = TranslationError;
+
+    fn try_from(value: [u8; 3]) -> Result<Self, Self::Error> {
+        Ok(Self([
+            NucleotideAmbiguous::try_from(value[0])?,
+            NucleotideAmbiguous::try_from(value[1])?,
+            NucleotideAmbiguous::try_from(value[2])?,
+        ]))
+    }
+}
+
+impl From<CodonAmbiguous> for [NucleotideAmbiguous; 3] {
+    fn from(c: CodonAmbiguous) -> Self {
+        c.0
+    }
+}
+
+impl fmt::Display for CodonAmbiguous {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}{}{}", self.0[0], self.0[1], self.0[2])
+    }
+}
+
+impl CodonAmbiguous {
+    pub fn possibilities(&self) -> impl Iterator<Item = Codon> + '_ {
+        self.0[0].possibilities().iter().flat_map(move |&a| {
+            self.0[1].possibilities().iter().flat_map(move |&b| {
+                self.0[2]
+                    .possibilities()
+                    .iter()
+                    .map(move |&c| Codon([a, b, c]))
+            })
+        })
     }
 }

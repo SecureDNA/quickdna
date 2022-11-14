@@ -7,7 +7,7 @@ from Bio.Seq import Seq
 from quickdna import DnaSequence
 from .utils import valid_tables
 
-NUCLEOTIDES = "ATCGN"
+NUCLEOTIDES = "ATCGWMRYSKBVDHN"
 
 
 def test_exhaustive():
@@ -19,4 +19,4 @@ def test_exhaustive():
                     qd_trans = chr(DnaSequence(dna).translate(table=table)[0])
                     bp_trans = str(Seq(dna).translate(table=table))[0]
 
-                    assert qd_trans == bp_trans, dna
+                    assert qd_trans == bp_trans, f"Testing {dna} in table {table}"
