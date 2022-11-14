@@ -40,4 +40,7 @@ clippy:
 
 # Runs black to format Python code
 black:
-    poetry run black .
+    poetry run black --check .
+
+pytest: develop
+    poetry run pytest
