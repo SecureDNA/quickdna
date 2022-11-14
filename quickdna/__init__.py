@@ -124,7 +124,9 @@ class DnaSequence(BaseSequence):
 
         return ProteinSequence(seq)
 
-    def translate_self_frames(self, table: int = 1, strict: bool = False) -> ty.List[ProteinSequence]:
+    def translate_self_frames(
+        self, table: int = 1, strict: bool = False
+    ) -> ty.List[ProteinSequence]:
         """
         Translate this DNA sequence into up to 3 protein sequences, one for each possible
         reading frame on this sense.
@@ -157,7 +159,9 @@ class DnaSequence(BaseSequence):
         else:
             return []
 
-    def translate_all_frames(self, table: int = 1, strict: bool = False) -> ty.List[ProteinSequence]:
+    def translate_all_frames(
+        self, table: int = 1, strict: bool = False
+    ) -> ty.List[ProteinSequence]:
         """
         Translate this DNA sequence into at most 6 protein sequences, one for each possible
         reading frame on this sense and the reverse complement.
@@ -174,7 +178,9 @@ class DnaSequence(BaseSequence):
 
         return [
             *self.translate_self_frames(table=table, strict=strict),
-            *self.reverse_complement().translate_self_frames(table=table, strict=strict),
+            *self.reverse_complement().translate_self_frames(
+                table=table, strict=strict
+            ),
         ]
 
     def reverse_complement(self, strict: bool = False) -> "DnaSequence":

@@ -4,8 +4,7 @@ from quickdna import DnaSequence, ProteinSequence
 
 
 def test_translate():
-    assert DnaSequence("AAAGGGAAA").translate(
-        table=1) == ProteinSequence("KGK")
+    assert DnaSequence("AAAGGGAAA").translate(table=1) == ProteinSequence("KGK")
 
 
 def test_translate_self():
@@ -148,7 +147,8 @@ def test_reverse_complement():
 
 
 def test_strict():
-    assert DnaSequence("AAAGGGAAA").translate(
-        table=1, strict=True) == ProteinSequence("KGK")
+    assert DnaSequence("AAAGGGAAA").translate(table=1, strict=True) == ProteinSequence(
+        "KGK"
+    )
     with pytest.raises(ValueError):
         DnaSequence("AAABBBAAA").translate(table=1, strict=True)
