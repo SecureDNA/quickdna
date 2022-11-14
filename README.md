@@ -6,6 +6,8 @@ Quickdna is a simple, fast library for working with DNA sequences. It is up to 1
 translation tasks, in part because it uses a native Rust module (via PyO3) for the translation. However, it exposes
 an easy-to-use, type-annotated API that should still feel familiar for Biopython users.
 
+⚠ *Quickdna is "pre-1.0" software. Its API is still evolving. For now, if you're interested in using quickdna, we suggest you depend on an [exact version](https://python-poetry.org/docs/dependency-specification/#exact-requirements) or [git `rev`](https://python-poetry.org/docs/dependency-specification/#git-dependencies), so that new releases don't break your code.*
+
 ```python
 # These are the two main library types. Unlike Biopython, DnaSequence and
 # ProteinSequence are distinct, though they share a common BaseSequence base class
