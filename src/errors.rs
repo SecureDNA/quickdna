@@ -8,6 +8,8 @@ pub enum TranslationError {
     NonAsciiChar(char),
     #[error("bad nucleotide: {:?}", .0)]
     BadNucleotide(char),
+    #[error("bad amino acid: {:?}", .0)]
+    BadAminoAcid(char),
     #[error("unexpected ambiguous nucleotide: {:?}", .0)]
     UnexpectedAmbiguousNucleotide(char),
     #[error("not a ncbi translation table: {}", .0)]
