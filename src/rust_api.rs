@@ -233,6 +233,14 @@ impl<T: NucleotideLike> BaseSequence for DnaSequence<T> {
 impls!(DnaSequence<Nucleotide>);
 impls!(DnaSequence<NucleotideAmbiguous>);
 
+impl<N: NucleotideLike> std::ops::Deref for DnaSequence<N> {
+    type Target = [N];
+
+    fn deref(&self) -> &[N] {
+        &self.dna
+    }
+}
+
 impl<T: NucleotideLike> fmt::Display for DnaSequence<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for &n in &self.dna {

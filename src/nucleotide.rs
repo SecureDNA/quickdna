@@ -41,6 +41,8 @@ pub enum NucleotideAmbiguous {
 pub trait NucleotideLike:
     Copy + Eq + Into<u8> + Into<char> + TryFrom<u8, Error = TranslationError>
 {
+    type Codon: From<[Self; 3]>;
+
     fn complement(self) -> Self;
     fn bits(self) -> u8;
     fn to_ascii(self) -> u8;
@@ -104,6 +106,8 @@ impl Nucleotide {
 }
 
 impl NucleotideLike for Nucleotide {
+    type Codon = Codon;
+
     fn complement(self) -> Self {
         match self {
             Self::A => Self::T,
@@ -172,6 +176,8 @@ impl NucleotideAmbiguous {
 }
 
 impl NucleotideLike for NucleotideAmbiguous {
+    type Codon = CodonAmbiguous;
+
     fn complement(self) -> Self {
         match self {
             Self::A => Self::T,
@@ -321,6 +327,12 @@ impl fmt::Display for NucleotideAmbiguous {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, std::hash::Hash)]
 pub struct Codon(pub [Nucleotide; 3]);
 
+impl From<[Nucleotide; 3]> for Codon {
+    fn from(nucleotides: [Nucleotide; 3]) -> Self {
+        Self(nucleotides)
+    }
+}
+
 impl TryFrom<[u8; 3]> for Codon {
     type Error = TranslationError;
 
@@ -347,6 +359,18 @@ impl fmt::Display for Codon {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, std::hash::Hash)]
 pub struct CodonAmbiguous(pub [NucleotideAmbiguous; 3]);
+
+impl From<Codon> for CodonAmbiguous {
+    fn from(codon: Codon) -> Self {
+        Self(codon.0.map(|n| n.into()))
+    }
+}
+
+impl From<[NucleotideAmbiguous; 3]> for CodonAmbiguous {
+    fn from(nucleotides: [NucleotideAmbiguous; 3]) -> Self {
+        Self(nucleotides)
+    }
+}
 
 impl TryFrom<[u8; 3]> for CodonAmbiguous {
     type Error = TranslationError;
