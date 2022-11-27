@@ -142,6 +142,20 @@ impl TranslationTable {
         }
     }
 
+    /// Convert this table to a callable that maps codons to amino acids
+    ///
+    /// Currently, amino acids are represented as [`u8`]s containing the ascii
+    /// code for the corresponding letter abbreviation.
+    pub fn to_fn<C: Into<CodonIdx>>(self) -> impl Copy + Fn(C) -> u8 {
+        let start = self.table_index() * Self::CODONS_PER_TABLE;
+        let end = start + Self::CODONS_PER_TABLE;
+        let table = &Self::TRANSLATION_TABLES[start..end];
+        |codon| {
+            let CodonIdx(i) = codon.into();
+            table[i]
+        }
+    }
+
     pub fn translate_dna_bytes<T: NucleotideLike>(
         self,
         dna: &[u8],
