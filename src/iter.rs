@@ -211,11 +211,15 @@ where
 impl<N, I> DoubleEndedIterator for Codons<I>
 where
     N: ToNucleotideLike,
-    I: DoubleEndedIterator<Item = N>,
+    I: DoubleEndedIterator<Item = N> + ExactSizeIterator,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
+        let remainder_nucleotides = self.0.len() % 3;
+        for _ in 0..remainder_nucleotides {
+            self.0.next_back();
+        }
         match (self.0.next_back(), self.0.next_back(), self.0.next_back()) {
-            (Some(n1), Some(n2), Some(n3)) => {
+            (Some(n3), Some(n2), Some(n1)) => {
                 Some([n1, n2, n3].map(|n| n.to_nucleotide_like()).into())
             }
             _ => None,
@@ -270,4 +274,18 @@ where
     Self: Iterator,
     I: ExactSizeIterator,
 {
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_reverse_codons() {
+        use Nucleotide::*;
+        let dna = [A, A, T, T, C, C, G, G];
+        let rev_codons: Vec<_> = dna.codons().rev().collect();
+        let expected = [[T, C, C].into(), [A, A, T].into()];
+        assert_eq!(rev_codons, expected);
+    }
 }
