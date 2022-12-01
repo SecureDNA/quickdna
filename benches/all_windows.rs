@@ -117,7 +117,8 @@ impl IterBasedSequenceWindows {
         }));
         aas.extend(
             dna.iter()
-                .reverse_complement()
+                .rev()
+                .complement()
                 .self_reading_frames()
                 .into_iter()
                 .map(|codons| {
@@ -128,7 +129,8 @@ impl IterBasedSequenceWindows {
 
         let dna_rc = dna
             .iter()
-            .reverse_complement()
+            .rev()
+            .complement()
             .map(|n| n.to_ascii())
             .collect();
         let dna_rc = String::from_utf8(dna_rc).unwrap();
