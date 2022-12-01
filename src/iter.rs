@@ -332,6 +332,9 @@ where
     Self: Iterator,
     I: ExactSizeIterator,
 {
+    fn len(&self) -> usize {
+        self.0.len() / 3
+    }
 }
 
 /// Adapter yielding complementary nucleotide of the contained iterator.
@@ -374,6 +377,9 @@ where
     Self: Iterator,
     I: ExactSizeIterator,
 {
+    fn len(&self) -> usize {
+        self.0.len()
+    }
 }
 
 /// Adapter capable of holding either forward codon iterators or reverse complement codon iterators.
@@ -389,7 +395,7 @@ pub enum ForwardOrRcCodons<I> {
 impl<N, I> Iterator for ForwardOrRcCodons<I>
 where
     N: ToNucleotideLike,
-    I: DoubleEndedIterator<Item = N> + ExactSizeIterator,
+    I: DoubleEndedIterator<Item = N>,
 {
     type Item = <N::NucleotideType as NucleotideLike>::Codon;
 
@@ -421,11 +427,18 @@ where
     }
 }
 
-impl<I> ExactSizeIterator for ForwardOrRcCodons<I>
+impl<N, I> ExactSizeIterator for ForwardOrRcCodons<I>
 where
     Self: Iterator,
-    I: ExactSizeIterator,
+    N: ToNucleotideLike,
+    I: DoubleEndedIterator<Item = N> + ExactSizeIterator,
 {
+    fn len(&self) -> usize {
+        match self {
+            Self::Forward(iter) => iter.len(),
+            Self::Rc(iter) => iter.len(),
+        }
+    }
 }
 
 #[cfg(test)]
