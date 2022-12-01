@@ -5,8 +5,8 @@ use crate::{Nucleotide, NucleotideAmbiguous, NucleotideLike};
 /// Helper trait to support iters regardless of whether their items are by-ref or by-value
 pub trait ToNucleotideLike
 where
-    // It's much easier for the compiler to reason about chained Nucleotides iterator
-    // adapters if we explicitly state that ToNucleotideLike is idempotent.
+    // It's much easier for the compiler to reason about chained NucleotideIters
+    // if we explicitly state that ToNucleotideLike is idempotent.
     Self::NucleotideType: ToNucleotideLike<NucleotideType = Self::NucleotideType>,
 {
     type NucleotideType: NucleotideLike + ToNucleotideLike;
