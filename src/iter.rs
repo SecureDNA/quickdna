@@ -46,8 +46,8 @@ impl ToNucleotideLike for &NucleotideAmbiguous {
     }
 }
 
-/// Extension trait for nucleotide sequences
-pub trait Nucleotides: IntoIterator {
+/// Extension trait for nucleotide iterators
+pub trait NucleotideIter: Iterator + Sized {
     /// Returns up to 6 non-empty codon iterators for forward and reverse complement reading frames.
     ///
     /// The foward codon iterators are given before the reverse complement ones, with the forward
@@ -58,12 +58,12 @@ pub trait Nucleotides: IntoIterator {
     /// # Examples
     ///
     /// ```
-    /// use quickdna::{Nucleotide, Nucleotides};
+    /// use quickdna::{Nucleotide, NucleotideIter};
     ///
     /// use Nucleotide::*;
     /// let dna = [C, G, A, T, C, G, A, T];
     ///
-    /// let frames = dna.all_reading_frames();
+    /// let frames = dna.iter().all_reading_frames();
     /// assert_eq!(frames.len(), 6);
     /// assert!(frames[0].clone().eq([
     ///     [C, G, A].into(),
@@ -92,7 +92,7 @@ pub trait Nucleotides: IntoIterator {
     ///
     /// // The last forward and RC reading frames are omitted
     /// // because they would only have 2 nucleotides.
-    /// let frames = dna[..4].all_reading_frames();
+    /// let frames = dna[..4].iter().all_reading_frames();
     /// assert_eq!(frames.len(), 4);
     /// assert!(frames[0].clone().eq([
     ///     [C, G, A].into(),
@@ -108,12 +108,12 @@ pub trait Nucleotides: IntoIterator {
     /// ]));
     ///
     /// // All reading frames are omitted due to insufficient nucleotides.
-    /// let frames = dna[..2].all_reading_frames();
+    /// let frames = dna[..2].iter().all_reading_frames();
     /// assert!(frames.is_empty());
     /// ```
-    fn all_reading_frames(self) -> SmallVec<[ForwardOrRcCodons<Self::IntoIter>; 6]>
+    fn all_reading_frames(self) -> SmallVec<[ForwardOrRcCodons<Self>; 6]>
     where
-        Self::IntoIter: Clone + DoubleEndedIterator + ExactSizeIterator;
+        Self: Clone + DoubleEndedIterator + ExactSizeIterator;
 
     /// Returns iterator of codons for the first reading frame of this nucleotide sequence.
     /// If the number of nucleotides isn't divisible by 3, excess nucleotides are silently
@@ -123,7 +123,7 @@ pub trait Nucleotides: IntoIterator {
     /// # Examples
     ///
     /// ```
-    /// use quickdna::{Codons, Nucleotide, Nucleotides};
+    /// use quickdna::{Codons, Nucleotide, NucleotideIter};
     ///
     /// use Nucleotide::*;
     /// let dna = [C, G, A, T, C, G, A, T];
@@ -132,41 +132,41 @@ pub trait Nucleotides: IntoIterator {
     ///     [C, G, A].into(),
     ///     [T, C, G].into(),
     /// ];
-    /// assert!(dna.codons().eq(expected_codons));
+    /// assert!(dna.iter().codons().eq(expected_codons));
     ///
-    /// assert!(dna.codons().eq(dna.self_reading_frames().remove(0)));
+    /// assert!(dna.iter().codons().eq(dna.iter().self_reading_frames().remove(0)));
     /// ```
-    fn codons(self) -> Codons<Self::IntoIter>;
+    fn codons(self) -> Codons<Self>;
 
     /// Returns iterator of complementary nucleotides.
     ///
     /// # Examples
     ///
     /// ```
-    /// use quickdna::{Nucleotide, Nucleotides};
+    /// use quickdna::{Nucleotide, NucleotideIter};
     ///
     /// use Nucleotide::*;
     /// let dna = [C, G, A, T];
     ///
-    /// assert!(dna.complement().eq([G, C, T, A]));
+    /// assert!(dna.iter().complement().eq([G, C, T, A]));
     /// ```
-    fn complement(self) -> Complement<Self::IntoIter>;
+    fn complement(self) -> Complement<Self>;
 
     /// Returns iterator of reverse complement of contained nucleotides.
     ///
     /// # Examples
     ///
     /// ```
-    /// use quickdna::{Nucleotide, Nucleotides};
+    /// use quickdna::{Nucleotide, NucleotideIter};
     ///
     /// use Nucleotide::*;
     /// let dna = [C, G, A, T];
     ///
-    /// assert!(dna.reverse_complement().eq([A, T, C, G]));
+    /// assert!(dna.iter().reverse_complement().eq([A, T, C, G]));
     /// ```
-    fn reverse_complement(self) -> std::iter::Rev<Complement<Self::IntoIter>>
+    fn reverse_complement(self) -> std::iter::Rev<Complement<Self>>
     where
-        Self::IntoIter: DoubleEndedIterator;
+        Self: DoubleEndedIterator;
 
     /// Returns up to 3 non-empty codon iterators for reading frames.
     ///
@@ -176,12 +176,12 @@ pub trait Nucleotides: IntoIterator {
     /// # Examples
     ///
     /// ```
-    /// use quickdna::{Nucleotide, Nucleotides};
+    /// use quickdna::{Nucleotide, NucleotideIter};
     ///
     /// use Nucleotide::*;
     /// let dna = [C, G, A, T, C, G, A, T];
     ///
-    /// let frames = dna.self_reading_frames();
+    /// let frames = dna.iter().self_reading_frames();
     /// assert_eq!(frames.len(), 3);
     /// assert!(frames[0].clone().eq([
     ///     [C, G, A].into(),
@@ -197,7 +197,7 @@ pub trait Nucleotides: IntoIterator {
     /// ]));
     ///
     /// // The last reading frame is omitted because it would only have 2 nucleotides.
-    /// let frames = dna[..4].self_reading_frames();
+    /// let frames = dna[..4].iter().self_reading_frames();
     /// assert_eq!(frames.len(), 2);
     /// assert!(frames[0].clone().eq([
     ///     [C, G, A].into(),
@@ -207,25 +207,24 @@ pub trait Nucleotides: IntoIterator {
     /// ]));
     ///
     /// // All reading frames are omitted due to insufficient nucleotides.
-    /// let frames = dna[..2].self_reading_frames();
+    /// let frames = dna[..2].iter().self_reading_frames();
     /// assert!(frames.is_empty());
     /// ```
-    fn self_reading_frames(self) -> SmallVec<[Codons<Self::IntoIter>; 3]>
+    fn self_reading_frames(self) -> SmallVec<[Codons<Self>; 3]>
     where
-        Self::IntoIter: Clone + ExactSizeIterator;
+        Self: Clone + ExactSizeIterator;
 }
 
-impl<N, I, T> Nucleotides for T
+impl<N, I> NucleotideIter for I
 where
     N: ToNucleotideLike,
     I: Iterator<Item = N>,
-    T: IntoIterator<IntoIter = I>,
 {
-    fn all_reading_frames(self) -> SmallVec<[ForwardOrRcCodons<Self::IntoIter>; 6]>
+    fn all_reading_frames(self) -> SmallVec<[ForwardOrRcCodons<Self>; 6]>
     where
-        Self::IntoIter: Clone + DoubleEndedIterator + ExactSizeIterator,
+        Self: Clone + DoubleEndedIterator + ExactSizeIterator,
     {
-        let iter1 = self.into_iter();
+        let iter1 = self;
         let mut iter2 = iter1.clone();
         iter2.next();
         let mut iter3 = iter2.clone();
@@ -249,26 +248,26 @@ where
         frames
     }
 
-    fn codons(self) -> Codons<Self::IntoIter> {
-        Codons(self.into_iter())
+    fn codons(self) -> Codons<Self> {
+        Codons(self)
     }
 
-    fn complement(self) -> Complement<Self::IntoIter> {
-        Complement(self.into_iter())
+    fn complement(self) -> Complement<Self> {
+        Complement(self)
     }
 
-    fn reverse_complement(self) -> std::iter::Rev<Complement<Self::IntoIter>>
+    fn reverse_complement(self) -> std::iter::Rev<Complement<Self>>
     where
-        Self::IntoIter: DoubleEndedIterator,
+        Self: DoubleEndedIterator,
     {
         self.complement().rev()
     }
 
-    fn self_reading_frames(self) -> SmallVec<[Codons<Self::IntoIter>; 3]>
+    fn self_reading_frames(self) -> SmallVec<[Codons<Self>; 3]>
     where
-        Self::IntoIter: Clone + ExactSizeIterator,
+        Self: Clone + ExactSizeIterator,
     {
-        let iter1 = self.into_iter();
+        let iter1 = self;
         let mut iter2 = iter1.clone();
         iter2.next();
         let mut iter3 = iter2.clone();
@@ -281,8 +280,8 @@ where
 
 /// Adapter yielding codons of the contained iterator.
 ///
-/// This `struct` is created by the [`codons`](Nucleotides::codons)
-/// method on [`Nucleotides`]. See its documentation for more.
+/// This `struct` is created by the [`codons`](NucleotideIter::codons)
+/// method on [`NucleotideIter`]. See its documentation for more.
 #[derive(Clone, Debug)]
 pub struct Codons<I>(I);
 
@@ -339,8 +338,8 @@ where
 
 /// Adapter yielding complementary nucleotide of the contained iterator.
 ///
-/// This `struct` is created by the [`complement`](Nucleotides::complement)
-/// method on [`Nucleotides`]. See its documentation for more.
+/// This `struct` is created by the [`complement`](NucleotideIter::complement)
+/// method on [`NucleotideIter`]. See its documentation for more.
 #[derive(Clone, Debug)]
 pub struct Complement<I>(I);
 
@@ -384,8 +383,8 @@ where
 
 /// Adapter capable of holding either forward codon iterators or reverse complement codon iterators.
 ///
-/// This `struct` is created by the [`all_reading_frames`](Nucleotides::all_reading_frames)
-/// method on [`Nucleotides`]. See its documentation for more.
+/// This `struct` is created by the [`all_reading_frames`](NucleotideIter::all_reading_frames)
+/// method on [`NucleotideIter`]. See its documentation for more.
 #[derive(Clone, Debug)]
 pub enum ForwardOrRcCodons<I> {
     Forward(Codons<I>),
@@ -449,7 +448,7 @@ mod test {
     fn test_reverse_codons() {
         use Nucleotide::*;
         let dna = [A, A, T, T, C, C, G, G];
-        let rev_codons: Vec<_> = dna.codons().rev().collect();
+        let rev_codons: Vec<_> = dna.iter().codons().rev().collect();
         let expected = [[T, C, C].into(), [A, A, T].into()];
         assert_eq!(rev_codons, expected);
     }

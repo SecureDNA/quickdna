@@ -3,7 +3,7 @@ use rand::{rngs::OsRng, seq::SliceRandom};
 use smallvec::SmallVec;
 
 use quickdna::{
-    BaseSequence, DnaSequence, Nucleotide, NucleotideLike, Nucleotides, TranslationTable,
+    BaseSequence, DnaSequence, Nucleotide, NucleotideIter, NucleotideLike, TranslationTable,
 };
 
 static PROTEIN_WINDOW_LEN: usize = 20;
@@ -111,12 +111,13 @@ impl IterBasedSequenceWindows {
     fn from_dna(dna: &[Nucleotide], dna_window_len: usize, protein_window_len: usize) -> Self {
         let mut aas = SmallVec::new();
         let ncbi1 = TranslationTable::Ncbi1.to_fn();
-        aas.extend(dna.self_reading_frames().into_iter().map(|codons| {
+        aas.extend(dna.iter().self_reading_frames().into_iter().map(|codons| {
             let translated: Vec<_> = codons.map(ncbi1).collect();
             String::from_utf8(translated).unwrap()
         }));
         aas.extend(
-            dna.reverse_complement()
+            dna.iter()
+                .reverse_complement()
                 .self_reading_frames()
                 .into_iter()
                 .map(|codons| {
@@ -125,7 +126,11 @@ impl IterBasedSequenceWindows {
                 }),
         );
 
-        let dna_rc = (&dna).reverse_complement().map(|n| n.to_ascii()).collect();
+        let dna_rc = dna
+            .iter()
+            .reverse_complement()
+            .map(|n| n.to_ascii())
+            .collect();
         let dna_rc = String::from_utf8(dna_rc).unwrap();
 
         let dna = dna.iter().map(|n| n.to_ascii()).collect();
