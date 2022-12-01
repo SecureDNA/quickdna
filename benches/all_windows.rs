@@ -111,13 +111,13 @@ impl IterBasedSequenceWindows {
     fn from_dna(dna: &[Nucleotide], dna_window_len: usize, protein_window_len: usize) -> Self {
         let mut aas = SmallVec::new();
         let ncbi1 = TranslationTable::Ncbi1.to_fn();
-        aas.extend(dna.reading_frames().into_iter().map(|codons| {
+        aas.extend(dna.self_reading_frames().into_iter().map(|codons| {
             let translated: Vec<_> = codons.map(ncbi1).collect();
             String::from_utf8(translated).unwrap()
         }));
         aas.extend(
             dna.reverse_complement()
-                .reading_frames()
+                .self_reading_frames()
                 .into_iter()
                 .map(|codons| {
                     let translated: Vec<_> = codons.map(ncbi1).collect();
