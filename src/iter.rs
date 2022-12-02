@@ -152,6 +152,22 @@ pub trait NucleotideIter: Iterator + Sized {
     /// ```
     fn complement(self) -> Complement<Self>;
 
+    /// Returns iterator of reverse complement of contained nucleotides.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use quickdna::{Nucleotide, NucleotideIter};
+    ///
+    /// use Nucleotide::*;
+    /// let dna = [C, G, A, T];
+    ///
+    /// assert!(dna.iter().reverse_complement().eq([A, T, C, G]));
+    /// ```
+    fn reverse_complement(self) -> std::iter::Rev<Complement<Self>>
+    where
+        Self: DoubleEndedIterator;
+
     /// Returns up to 3 non-empty codon iterators for reading frames.
     ///
     /// The iterators are given in ascending order of offset from the beginning of the
@@ -214,7 +230,7 @@ where
         let mut iter3 = iter2.clone();
         iter3.next();
 
-        let iter1_rc = iter1.clone().rev().complement();
+        let iter1_rc = iter1.clone().reverse_complement();
         let mut iter2_rc = iter1_rc.clone();
         iter2_rc.next();
         let mut iter3_rc = iter2_rc.clone();
@@ -238,6 +254,13 @@ where
 
     fn complement(self) -> Complement<Self> {
         Complement(self)
+    }
+
+    fn reverse_complement(self) -> std::iter::Rev<Complement<Self>>
+    where
+        Self: DoubleEndedIterator,
+    {
+        self.complement().rev()
     }
 
     fn self_reading_frames(self) -> SmallVec<[Codons<Self>; 3]>
@@ -365,7 +388,7 @@ where
 #[derive(Clone, Debug)]
 pub enum ForwardOrRcCodons<I> {
     Forward(Codons<I>),
-    Rc(Codons<Complement<std::iter::Rev<I>>>),
+    Rc(Codons<std::iter::Rev<Complement<I>>>),
 }
 
 impl<N, I> Iterator for ForwardOrRcCodons<I>
