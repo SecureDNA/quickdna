@@ -164,7 +164,7 @@ pub trait NucleotideIter: Iterator + Sized {
     ///
     /// assert!(dna.iter().reverse_complement().eq([A, T, C, G]));
     /// ```
-    fn reverse_complement(self) -> std::iter::Rev<Complement<Self>>
+    fn reverse_complement(self) -> Complement<std::iter::Rev<Self>>
     where
         Self: DoubleEndedIterator;
 
@@ -256,11 +256,11 @@ where
         Complement(self)
     }
 
-    fn reverse_complement(self) -> std::iter::Rev<Complement<Self>>
+    fn reverse_complement(self) -> Complement<std::iter::Rev<Self>>
     where
         Self: DoubleEndedIterator,
     {
-        self.complement().rev()
+        self.rev().complement()
     }
 
     fn self_reading_frames(self) -> SmallVec<[Codons<Self>; 3]>
@@ -388,7 +388,7 @@ where
 #[derive(Clone, Debug)]
 pub enum ForwardOrRcCodons<I> {
     Forward(Codons<I>),
-    Rc(Codons<std::iter::Rev<Complement<I>>>),
+    Rc(Codons<Complement<std::iter::Rev<I>>>),
 }
 
 impl<N, I> Iterator for ForwardOrRcCodons<I>
