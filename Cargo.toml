@@ -10,6 +10,10 @@ thiserror = "1.0.30"
 smallvec = "1.8.0"
 pyo3 = {version = "0.17.1", features = ["extension-module"], optional = true}
 
+[dev-dependencies]
+criterion = "0.4.0"
+rand = "0.8.5"
+
 [lib]
 name = "quickdna"
 crate-type = ["cdylib", "rlib"]
@@ -17,3 +21,7 @@ crate-type = ["cdylib", "rlib"]
 [features]
 python-support = ["dep:pyo3"]
 default = ["python-support"]
+
+[[bench]]
+name = "all_windows"
+harness = false

@@ -9,6 +9,9 @@ pub mod trans_table; // needs to be public for bin/gen_table
 mod fasta;
 pub use fasta::*;
 
+mod iter;
+pub use iter::*;
+
 mod rust_api;
 pub use rust_api::*;
 

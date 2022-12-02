@@ -142,6 +142,33 @@ impl TranslationTable {
         }
     }
 
+    /// Convert this table to a callable that maps codons to amino acids
+    ///
+    /// Currently, amino acids are represented as [`u8`]s containing the ascii
+    /// code for the corresponding letter abbreviation.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use quickdna::{Nucleotide, NucleotideIter, TranslationTable};
+    ///
+    /// use Nucleotide::*;
+    /// let dna = [A, T, C, G, A, T, C, G];
+    ///
+    /// let ncbi1 = TranslationTable::Ncbi1.to_fn();
+    /// let aas = dna.iter().codons().map(ncbi1);
+    /// assert!(aas.eq([b'I', b'D']));
+    /// ```
+    pub fn to_fn<C: Into<CodonIdx>>(self) -> impl Copy + Fn(C) -> u8 {
+        let start = self.table_index() * Self::CODONS_PER_TABLE;
+        let end = start + Self::CODONS_PER_TABLE;
+        let table = &Self::TRANSLATION_TABLES[start..end];
+        |codon| {
+            let CodonIdx(i) = codon.into();
+            table[i]
+        }
+    }
+
     pub fn translate_dna_bytes<T: NucleotideLike>(
         self,
         dna: &[u8],
