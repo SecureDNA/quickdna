@@ -4,7 +4,7 @@ use crate::{
 };
 
 /// Identifies a translation table for turning codons into amino acids.
-/// See: https://en.wikipedia.org/wiki/List_of_genetic_codes
+/// See: <https://en.wikipedia.org/wiki/List_of_genetic_codes>
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TranslationTable {
     /// The standard code
