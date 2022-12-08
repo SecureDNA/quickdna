@@ -1,5 +1,6 @@
 //! This module is for reading and writing FASTA format files
 
+use std::fmt::Display;
 use std::io::{self, BufRead};
 use std::str::FromStr;
 
@@ -31,6 +32,15 @@ impl FastaRecord<String> {
             contents,
             line_range,
         })
+    }
+}
+
+impl<T: ToString> Display for FastaRecord<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if !self.header.is_empty() {
+            write!(f, ">{}\n", self.header.replace("\n", "\n>"))?;
+        }
+        write!(f, "{}\n", self.contents.to_string())
     }
 }
 
@@ -1308,6 +1318,31 @@ mod tests {
                 },
             ]
         );
+    }
+
+    #[test]
+    fn test_to_string() {
+        let parser = FastaParser::<DnaSequence<Nucleotide>>::lax();
+        let string = ">Virus1\nAC\nT\n>Empty\n\n>Virus2\n>with many\n>comment lines\nC  AT";
+        let parsed = parser.parse_str(string).unwrap();
+
+        // Test: if we to_string all these records and concat them, that should
+        // parse to the same records again, ignoring line_range.
+        let restrung = parsed
+            .iter()
+            .map(|r| r.to_string())
+            .collect::<Vec<_>>()
+            .concat();
+        let reparsed = parser.parse_str(&restrung).unwrap();
+
+        assert_eq!(parsed.len(), 3);
+        assert_eq!(reparsed.len(), 3);
+
+        // Compare all records, but ignore line_range:
+        for i in 0..3 {
+            assert_eq!(parsed[i].header, reparsed[i].header);
+            assert_eq!(parsed[i].contents, reparsed[i].contents);
+        }
     }
 
     // TODO: when we add validation for ProteinSequence, add tests for that here
