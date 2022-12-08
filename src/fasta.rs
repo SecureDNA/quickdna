@@ -38,9 +38,9 @@ impl FastaRecord<String> {
 impl<T: ToString> Display for FastaRecord<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if !self.header.is_empty() {
-            write!(f, ">{}\n", self.header.replace("\n", "\n>"))?;
+            writeln!(f, ">{}", self.header.replace('\n', "\n>"))?;
         }
-        write!(f, "{}\n", self.contents.to_string())
+        writeln!(f, "{}", self.contents.to_string())
     }
 }
 

@@ -569,9 +569,9 @@ mod tests {
         let p1 = protein("aaa");
         let p2 = protein("aaa");
 
-        assert_eq!(hash(&d1), hash(&d2));
+        assert_eq!(hash(&d1), hash(d2));
         assert!(hash(&d1) != hash(&p1));
-        assert_eq!(hash(&p1), hash(&p2));
+        assert_eq!(hash(&p1), hash(p2));
     }
 
     #[test]
@@ -581,9 +581,9 @@ mod tests {
         let p1 = protein("aaa");
         let p2 = protein("aaa");
 
-        assert_eq!(hash(&d1), hash(&d2));
+        assert_eq!(hash(&d1), hash(d2));
         assert!(hash(&d1) != hash(&p1));
-        assert_eq!(hash(&p1), hash(&p2));
+        assert_eq!(hash(&p1), hash(p2));
     }
 
     #[test]
