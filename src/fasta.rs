@@ -1340,13 +1340,10 @@ mod tests {
 
         // Test: if we to_string the parsed file and parse it again, we should
         // get the same records again, ignoring line_range.
-        let restrung = parsed.to_string();
-        let reparsed = parser.parse_str(&restrung).unwrap();
+        let reparsed = parser.parse_str(&parsed.to_string()).unwrap();
 
         assert_eq!(parsed.records.len(), 3);
         assert_eq!(reparsed.records.len(), 3);
-
-        // Compare all records, but ignore line_range:
         for i in 0..3 {
             assert_eq!(parsed.records[i].header, reparsed.records[i].header);
             assert_eq!(parsed.records[i].contents, reparsed.records[i].contents);
