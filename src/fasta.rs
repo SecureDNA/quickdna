@@ -1,5 +1,6 @@
 //! This module is for reading and writing FASTA format files
 
+use std::fmt::Display;
 use std::io::{self, BufRead};
 use std::str::FromStr;
 
@@ -15,6 +16,12 @@ pub struct FastaRecord<T> {
     /// The starting and ending line numbers of this record, start inclusive, end exclusive, 1-indexed.
     /// The record header is included in this range.
     pub line_range: (usize, usize),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FastaFile<T> {
+    /// The records parsed from the file.
+    pub records: Vec<FastaRecord<T>>,
 }
 
 impl FastaRecord<String> {
@@ -34,6 +41,24 @@ impl FastaRecord<String> {
     }
 }
 
+impl<T: Display> Display for FastaRecord<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if !self.header.is_empty() {
+            writeln!(f, ">{}", self.header.replace('\n', "\n>"))?;
+        }
+        writeln!(f, "{}", self.contents)
+    }
+}
+
+impl<T: Display> Display for FastaFile<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for record in &self.records {
+            write!(f, "{}", record)?;
+        }
+        Ok(())
+    }
+}
+
 /// Settings for a fasta parser.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct FastaParseSettings {
@@ -47,7 +72,7 @@ pub struct FastaParseSettings {
     ///     FastaParseSettings::new().concatenate_headers(false)
     /// ).parse_str(">a\n>b\n...").unwrap();
     /// assert_eq!(
-    ///     nonconcat,
+    ///     nonconcat.records,
     ///     vec![
     ///         FastaRecord {
     ///             header: "a".to_string(),
@@ -66,7 +91,7 @@ pub struct FastaParseSettings {
     ///     FastaParseSettings::new().concatenate_headers(true)
     /// ).parse_str(">a\n>b\n...").unwrap();
     /// assert_eq!(
-    ///     concat,
+    ///     concat.records,
     ///     vec![
     ///         FastaRecord {
     ///             header: "a\nb".to_string(),
@@ -88,7 +113,7 @@ pub struct FastaParseSettings {
     ///     FastaParseSettings::new().allow_preceding_comment(true)
     /// ).parse_str("comment\n>a\nsequence").unwrap();
     /// assert_eq!(
-    ///     comment,
+    ///     comment.records,
     ///     vec![
     ///         FastaRecord {
     ///             header: "a".to_string(),
@@ -102,7 +127,7 @@ pub struct FastaParseSettings {
     ///     FastaParseSettings::new().allow_preceding_comment(false)
     /// ).parse_str("comment\n>a\nsequence").unwrap();
     /// assert_eq!(
-    ///     comment,
+    ///     comment.records,
     ///     vec![
     ///         FastaRecord {
     ///             header: "".to_string(),
@@ -411,11 +436,8 @@ impl<T: FromStr> FastaParser<T> {
         Self::new(FastaParseSettings::lax())
     }
 
-    pub fn parse<R: BufRead>(
-        &self,
-        handle: R,
-    ) -> Result<Vec<FastaRecord<T>>, FastaParseError<T::Err>> {
-        let mut result: Vec<FastaRecord<T>> = vec![];
+    pub fn parse<R: BufRead>(&self, handle: R) -> Result<FastaFile<T>, FastaParseError<T::Err>> {
+        let mut records: Vec<FastaRecord<T>> = vec![];
         let mut state = ParserState::StartOfFile {
             contents: "".to_string(),
         };
@@ -428,18 +450,18 @@ impl<T: FromStr> FastaParser<T> {
             let (new_state, record) = state.advance_line(&self.settings, &line, line_number);
             state = new_state;
             if let Some(record) = record {
-                result.push(record.parse().map_err(FastaParseError::ParseError)?);
+                records.push(record.parse().map_err(FastaParseError::ParseError)?);
             }
         }
 
         if let Some(record) = state.advance_eof(&self.settings, line_number + 1) {
-            result.push(record.parse().map_err(FastaParseError::ParseError)?);
+            records.push(record.parse().map_err(FastaParseError::ParseError)?);
         }
 
-        Ok(result)
+        Ok(FastaFile { records })
     }
 
-    pub fn parse_str(&self, s: &str) -> Result<Vec<FastaRecord<T>>, FastaParseError<T::Err>> {
+    pub fn parse_str(&self, s: &str) -> Result<FastaFile<T>, FastaParseError<T::Err>> {
         self.parse(s.as_bytes())
     }
 }
@@ -465,7 +487,7 @@ mod tests {
     macro_rules! assert_parse {
         ($testcase:expr, $parser:expr, $expected:expr) => {
             assert_eq!(
-                $parser.parse_str($testcase).unwrap(),
+                $parser.parse_str($testcase).unwrap().records,
                 $expected,
                 "settings = {:?}",
                 $parser.settings
@@ -1308,6 +1330,24 @@ mod tests {
                 },
             ]
         );
+    }
+
+    #[test]
+    fn test_to_string() {
+        let parser = FastaParser::<DnaSequence<Nucleotide>>::lax();
+        let string = ">Virus1\nAC\nT\n>Empty\n\n>Virus2\n>with many\n>comment lines\nC  AT";
+        let parsed = parser.parse_str(string).unwrap();
+
+        // Test: if we to_string the parsed file and parse it again, we should
+        // get the same records again, ignoring line_range.
+        let reparsed = parser.parse_str(&parsed.to_string()).unwrap();
+
+        assert_eq!(parsed.records.len(), 3);
+        assert_eq!(reparsed.records.len(), 3);
+        for i in 0..3 {
+            assert_eq!(parsed.records[i].header, reparsed.records[i].header);
+            assert_eq!(parsed.records[i].contents, reparsed.records[i].contents);
+        }
     }
 
     // TODO: when we add validation for ProteinSequence, add tests for that here
