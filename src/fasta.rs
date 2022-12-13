@@ -41,16 +41,16 @@ impl FastaRecord<String> {
     }
 }
 
-impl<T: ToString> Display for FastaRecord<T> {
+impl<T: Display> Display for FastaRecord<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if !self.header.is_empty() {
             writeln!(f, ">{}", self.header.replace('\n', "\n>"))?;
         }
-        writeln!(f, "{}", self.contents.to_string())
+        writeln!(f, "{}", self.contents)
     }
 }
 
-impl<T: ToString> Display for FastaFile<T> {
+impl<T: Display> Display for FastaFile<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for record in &self.records {
             write!(f, "{}", record)?;
