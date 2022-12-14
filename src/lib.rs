@@ -20,3 +20,6 @@ mod python_api;
 
 #[cfg(feature = "python-support")]
 pub use python_api::*;
+
+#[cfg(feature = "quickcheck")]
+mod quickcheck;
