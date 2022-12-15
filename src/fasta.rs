@@ -59,6 +59,15 @@ impl<T: Display> Display for FastaFile<T> {
     }
 }
 
+impl<T> IntoIterator for FastaFile<T> {
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+    type Item = FastaRecord<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.records.into_iter()
+    }
+}
+
 /// Settings for a fasta parser.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct FastaParseSettings {
@@ -1348,6 +1357,34 @@ mod tests {
             assert_eq!(parsed.records[i].header, reparsed.records[i].header);
             assert_eq!(parsed.records[i].contents, reparsed.records[i].contents);
         }
+    }
+
+    #[test]
+    fn test_fasta_file_into_iter() {
+        let parser = FastaParser::<DnaSequence<Nucleotide>>::lax();
+        let string = ">Virus1\nCAT\n>Virus2\nTAG";
+
+        // Existing code assumes we can loop over the result of of parse_str... let's explicitly do that.
+        let mut output = vec![];
+        for data in parser.parse_str(string).unwrap() {
+            output.push(data);
+        }
+
+        assert_eq!(
+            output,
+            [
+                FastaRecord {
+                    header: "Virus1".to_owned(),
+                    contents: "CAT".parse().unwrap(),
+                    line_range: (1, 3)
+                },
+                FastaRecord {
+                    header: "Virus2".to_owned(),
+                    contents: "TAG".parse().unwrap(),
+                    line_range: (3, 5)
+                }
+            ]
+        );
     }
 
     // TODO: when we add validation for ProteinSequence, add tests for that here
