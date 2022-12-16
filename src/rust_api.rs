@@ -136,7 +136,7 @@ impl FromStr for ProteinSequence {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, std::hash::Hash)]
-pub struct DnaSequence<T: NucleotideLike = Nucleotide> {
+pub struct DnaSequence<T: NucleotideLike> {
     dna: Vec<T>,
 }
 
