@@ -135,6 +135,9 @@ impl FromStr for ProteinSequence {
     }
 }
 
+pub type DnaSequenceStrict = DnaSequence<Nucleotide>;
+pub type DnaSequenceAmbiguous = DnaSequence<NucleotideAmbiguous>;
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, std::hash::Hash)]
 pub struct DnaSequence<T: NucleotideLike> {
     dna: Vec<T>,
