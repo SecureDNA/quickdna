@@ -14,27 +14,22 @@ where
     fn to_nucleotide_like(self) -> Self::NucleotideType;
 }
 
-impl ToNucleotideLike for Nucleotide {
-    type NucleotideType = Nucleotide;
+impl<N: NucleotideLike> ToNucleotideLike for N {
+    type NucleotideType = N;
 
-    fn to_nucleotide_like(self) -> Nucleotide {
+    fn to_nucleotide_like(self) -> N {
         self
     }
 }
+
+// Sadly, without specialization we can't get this to work with arbitrary
+// &T where T: NucleotideLike but that shouldn't be necessary in practice.
 
 impl ToNucleotideLike for &Nucleotide {
     type NucleotideType = Nucleotide;
 
     fn to_nucleotide_like(self) -> Nucleotide {
         *self
-    }
-}
-
-impl ToNucleotideLike for NucleotideAmbiguous {
-    type NucleotideType = NucleotideAmbiguous;
-
-    fn to_nucleotide_like(self) -> NucleotideAmbiguous {
-        self
     }
 }
 
