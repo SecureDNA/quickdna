@@ -41,7 +41,7 @@ pub enum NucleotideAmbiguous {
 pub trait NucleotideLike:
     Copy + Eq + Into<u8> + Into<char> + TryFrom<u8, Error = TranslationError>
 {
-    type Codon: From<[Self; 3]>;
+    type Codon: From<[Self; 3]> + Into<[Self; 3]>;
 
     fn complement(self) -> Self;
     fn bits(self) -> u8;

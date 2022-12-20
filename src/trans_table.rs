@@ -159,12 +159,13 @@ impl TranslationTable {
     /// let aas = dna.iter().codons().map(ncbi1);
     /// assert!(aas.eq([b'I', b'D']));
     /// ```
-    pub fn to_fn<C: Into<CodonIdx>>(self) -> impl Copy + Fn(C) -> u8 {
+    pub fn to_fn<N: NucleotideLike, C: Into<[N; 3]>>(self) -> impl Copy + Fn(C) -> u8 {
         let start = self.table_index() * Self::CODONS_PER_TABLE;
         let end = start + Self::CODONS_PER_TABLE;
         let table = &Self::TRANSLATION_TABLES[start..end];
         |codon| {
-            let CodonIdx(i) = codon.into();
+            let nucleotides: [N; 3] = codon.into();
+            let CodonIdx(i) = nucleotides.into();
             table[i]
         }
     }
