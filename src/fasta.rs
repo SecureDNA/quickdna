@@ -491,38 +491,18 @@ mod tests {
 
     /// Assert a parse matches the expected value with any combination of parser settings
     fn assert_parse_with_all_settings(s: &str, expected: Vec<FastaRecord<String>>) {
-        assert_parse!(
-            s,
-            FastaParser::<String>::new(FastaParseSettings {
-                concatenate_headers: true,
-                allow_preceding_comment: true
-            }),
-            expected
-        );
-        assert_parse!(
-            s,
-            FastaParser::<String>::new(FastaParseSettings {
-                concatenate_headers: true,
-                allow_preceding_comment: false
-            }),
-            expected
-        );
-        assert_parse!(
-            s,
-            FastaParser::<String>::new(FastaParseSettings {
-                concatenate_headers: false,
-                allow_preceding_comment: true
-            }),
-            expected
-        );
-        assert_parse!(
-            s,
-            FastaParser::<String>::new(FastaParseSettings {
-                concatenate_headers: false,
-                allow_preceding_comment: false
-            }),
-            expected
-        );
+        for concatenate_headers in [false, true] {
+            for allow_preceding_comment in [false, true] {
+                assert_parse!(
+                    s,
+                    FastaParser::<String>::new(FastaParseSettings {
+                        concatenate_headers,
+                        allow_preceding_comment,
+                    }),
+                    expected
+                );
+            }
+        }
     }
 
     /// Assert a parse matches the expected value with the given value of concatenate_headers,
@@ -532,22 +512,16 @@ mod tests {
         concatenate_headers: bool,
         expected: Vec<FastaRecord<String>>,
     ) {
-        assert_parse!(
-            s,
-            FastaParser::<String>::new(FastaParseSettings {
-                concatenate_headers,
-                allow_preceding_comment: true
-            }),
-            expected
-        );
-        assert_parse!(
-            s,
-            FastaParser::<String>::new(FastaParseSettings {
-                concatenate_headers,
-                allow_preceding_comment: false
-            }),
-            expected
-        );
+        for allow_preceding_comment in [false, true] {
+            assert_parse!(
+                s,
+                FastaParser::<String>::new(FastaParseSettings {
+                    concatenate_headers,
+                    allow_preceding_comment,
+                }),
+                expected
+            );
+        }
     }
 
     /// Assert a parse matches the expected value with the given value of allow_preceding_comment,
@@ -557,22 +531,16 @@ mod tests {
         allow_preceding_comment: bool,
         expected: Vec<FastaRecord<String>>,
     ) {
-        assert_parse!(
-            s,
-            FastaParser::<String>::new(FastaParseSettings {
-                concatenate_headers: true,
-                allow_preceding_comment
-            }),
-            expected
-        );
-        assert_parse!(
-            s,
-            FastaParser::<String>::new(FastaParseSettings {
-                concatenate_headers: false,
-                allow_preceding_comment
-            }),
-            expected
-        );
+        for concatenate_headers in [false, true] {
+            assert_parse!(
+                s,
+                FastaParser::<String>::new(FastaParseSettings {
+                    concatenate_headers,
+                    allow_preceding_comment,
+                }),
+                expected
+            );
+        }
     }
 
     /// Helper to panic if a closure doesn't complete within a specified Duration.
