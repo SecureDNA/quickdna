@@ -1332,22 +1332,5 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_preceding_comment() {
-        let parser = FastaParser::<DnaSequence<Nucleotide>>::new(
-            FastaParseSettings::new().allow_preceding_comment(true),
-        );
-        assert_parse!("AAA", parser, vec![]);
-        assert_parse!(
-            "AAA\n>Virus1\nCCC",
-            parser,
-            vec![FastaRecord {
-                header: "Virus1".to_string(),
-                contents: "CCC".parse().unwrap(),
-                line_range: (2, 4),
-            }]
-        );
-    }
-
     // TODO: when we add validation for ProteinSequence, add tests for that here
 }
