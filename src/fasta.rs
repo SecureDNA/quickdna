@@ -1296,9 +1296,8 @@ mod tests {
 
     #[test]
     fn test_duplicate_header_lines() {
-        assert_parse!(
+        assert_parse_with_all_settings(
             ">Virus1\nAAAA\nAAAA\n>Virus1\nCCCC\nCCCC\n",
-            FastaParser::<DnaSequence<Nucleotide>>::default(),
             vec![
                 FastaRecord {
                     header: "Virus1".to_string(),
@@ -1310,7 +1309,7 @@ mod tests {
                     contents: "CCCCCCCC".parse().unwrap(),
                     line_range: (4, 7),
                 },
-            ]
+            ],
         );
     }
 
