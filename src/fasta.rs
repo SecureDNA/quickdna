@@ -59,6 +59,15 @@ impl<T: Display> Display for FastaFile<T> {
     }
 }
 
+impl<T> IntoIterator for FastaFile<T> {
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+    type Item = FastaRecord<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.records.into_iter()
+    }
+}
+
 /// Settings for a fasta parser.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct FastaParseSettings {
@@ -1301,7 +1310,7 @@ mod tests {
 
     #[test]
     fn test_fasta_file_into_iter() {
-        let parser = FastaParser::<DnaSequence<Nucleotide>>::lax();
+        let parser = FastaParser::<DnaSequence<Nucleotide>>::default();
         let string = ">Virus1\nCAT\n>Virus2\nTAG";
 
         // Existing code assumes we can loop over the result of of parse_str... let's explicitly do that.
