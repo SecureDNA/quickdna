@@ -412,11 +412,6 @@ impl<T: FromStr> FastaParser<T> {
         }
     }
 
-    /// Construct a new FastaParser with default settings (see [`FastaParseSettings::new()`])
-    pub fn default() -> Self {
-        Self::new(FastaParseSettings::new())
-    }
-
     pub fn parse<R: BufRead>(&self, handle: R) -> Result<FastaFile<T>, FastaParseError<T::Err>> {
         let mut records: Vec<FastaRecord<T>> = vec![];
         let mut state = ParserState::StartOfFile {
@@ -444,6 +439,13 @@ impl<T: FromStr> FastaParser<T> {
 
     pub fn parse_str(&self, s: &str) -> Result<FastaFile<T>, FastaParseError<T::Err>> {
         self.parse(s.as_bytes())
+    }
+}
+
+impl<T: FromStr> Default for FastaParser<T> {
+    /// Construct a new FastaParser with default settings (see [`FastaParseSettings::new()`])
+    fn default() -> Self {
+        Self::new(FastaParseSettings::default())
     }
 }
 
@@ -1347,22 +1349,5 @@ mod tests {
         );
     }
 
-
-    #[test]
-    fn test_preceding_comment() {
-        let parser = FastaParser::<DnaSequence<Nucleotide>>::new(
-            FastaParseSettings::new().allow_preceding_comment(true),
-        );
-        assert_parse!("AAA", parser, vec![]);
-        assert_parse!(
-            "AAA\n>Virus1\nCCC",
-            parser,
-            vec![FastaRecord {
-                header: "Virus1".to_string(),
-                contents: "CCC".parse().unwrap(),
-                line_range: (2, 4),
-            }]
-        );
-    }
     // TODO: when we add validation for ProteinSequence, add tests for that here
 }
