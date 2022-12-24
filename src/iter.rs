@@ -285,6 +285,66 @@ where
 #[derive(Clone, Debug)]
 pub struct Codons<I>(I);
 
+impl<I> Codons<I>
+where
+    I: NucleotideIter,
+{
+    /// Returns the reverse complement of the codons
+    ///
+    /// This reverse-complements the DNA of the codons, discarding
+    /// any excess nucleotides in the underlying iterator. In other words,
+    /// `dna.codons().reverse_complement()` differs from
+    /// `dna.reverse_complement().codons()` whenever the number of nucleotides isn't
+    /// a multiple of 3, because the latter won't stay aligned to the same
+    /// reading frame.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use quickdna::{Nucleotide, NucleotideIter};
+    ///
+    /// use Nucleotide::*;
+    /// let dna = [A, A, T, T, C, C, G, G];
+    ///
+    /// // This reverse-complements AAT TCC, ignoring the excess GG,
+    /// // yielding GGA ATT
+    /// let rc_codons = dna.iter().codons().reverse_complement();
+    ///
+    /// let expected_codons = [
+    ///     [G, G, A].into(),
+    ///     [A, T, T].into(),
+    /// ];
+    /// assert!(rc_codons.eq(expected_codons));
+    ///
+    /// // This reverse-complements the entire DNA so we call .codons() on CCGGAATT,
+    /// // yielding CCG GAA
+    /// let rc_dna_codons = dna.iter().reverse_complement().codons();
+    ///
+    /// let expected_codons = [
+    ///     [C, C, G].into(),
+    ///     [G, A, A].into(),
+    /// ];
+    /// assert!(rc_dna_codons.eq(expected_codons));
+    /// ```
+    pub fn reverse_complement(mut self) -> Codons<Complement<std::iter::Rev<I>>>
+    where
+        I: ExactSizeIterator + DoubleEndedIterator,
+    {
+        self.trim_excess_dna();
+        Codons(self.0.reverse_complement())
+    }
+
+    fn trim_excess_dna(&mut self)
+    where
+        I: ExactSizeIterator + DoubleEndedIterator,
+    {
+        let remainder_nucleotides = self.0.len() % 3;
+        for _ in 0..remainder_nucleotides {
+            self.0.next_back();
+        }
+    }
+}
+
 impl<N, I> Iterator for Codons<I>
 where
     N: ToNucleotideLike,
@@ -313,10 +373,7 @@ where
     I: DoubleEndedIterator<Item = N> + ExactSizeIterator,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
-        let remainder_nucleotides = self.0.len() % 3;
-        for _ in 0..remainder_nucleotides {
-            self.0.next_back();
-        }
+        self.trim_excess_dna();
         match (self.0.next_back(), self.0.next_back(), self.0.next_back()) {
             (Some(n3), Some(n2), Some(n1)) => {
                 Some([n1, n2, n3].map(|n| n.to_nucleotide_like()).into())
