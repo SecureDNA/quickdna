@@ -208,6 +208,49 @@ pub trait NucleotideIter: Iterator + Sized {
     fn self_reading_frames(self) -> SmallVec<[Codons<Self>; 3]>
     where
         Self: Clone + ExactSizeIterator;
+
+    /// Trims excess nucleotides off iterator end so it aligns with a codon boundary.
+    ///
+    /// This makes the iterator's length a multiple of 3 by removing up to 2 elements from its end.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use quickdna::{Nucleotide, NucleotideIter};
+    ///
+    /// use Nucleotide::*;
+    /// let dna = [C, G, A, T, C, G, A, T];
+    ///
+    /// let mut iter = dna.into_iter();
+    /// iter.trim_to_codon();
+    ///
+    /// assert!(iter.eq([C, G, A, T, C, G]));
+    /// ```
+    fn trim_to_codon(&mut self)
+    where
+        Self: DoubleEndedIterator + ExactSizeIterator;
+
+    /// Trims excess nucleotides off iterator end so it aligns with a codon boundary.
+    ///
+    /// This makes the iterator's length a multiple of 3 by removing up to 2 elements from its end.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use quickdna::{Nucleotide, NucleotideIter};
+    ///
+    /// use Nucleotide::*;
+    /// let dna = [C, G, A, T, C, G, A, T];
+    ///
+    /// assert!(dna.into_iter().trimmed_to_codon().eq([C, G, A, T, C, G]));
+    /// ```
+    fn trimmed_to_codon(mut self) -> Self
+    where
+        Self: DoubleEndedIterator + ExactSizeIterator,
+    {
+        self.trim_to_codon();
+        self
+    }
 }
 
 impl<N, I> NucleotideIter for I
@@ -271,6 +314,15 @@ where
         frames.retain(|frame| frame.len() > 0);
         frames
     }
+
+    fn trim_to_codon(&mut self)
+    where
+        Self: DoubleEndedIterator + ExactSizeIterator,
+    {
+        for _ in 0..(self.len() % 3) {
+            self.next_back();
+        }
+    }
 }
 
 /// Adapter yielding codons of the contained iterator.
@@ -308,10 +360,7 @@ where
     I: DoubleEndedIterator<Item = N> + ExactSizeIterator,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
-        let remainder_nucleotides = self.0.len() % 3;
-        for _ in 0..remainder_nucleotides {
-            self.0.next_back();
-        }
+        self.0.trim_to_codon();
         match (self.0.next_back(), self.0.next_back(), self.0.next_back()) {
             (Some(n3), Some(n2), Some(n1)) => {
                 Some([n1, n2, n3].map(|n| n.to_nucleotide_like()).into())
