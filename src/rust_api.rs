@@ -13,7 +13,10 @@ pub use crate::trans_table::TranslationTable;
 use crate::trans_table::reverse_complement;
 
 #[cfg(feature = "serde")]
-use serde_with::{DeserializeFromStr, SerializeDisplay};
+use std::marker::PhantomData;
+
+#[cfg(feature = "serde")]
+use crate::serde_utils;
 
 pub trait BaseSequence: std::marker::Sized {
     type Item: Into<u8> + Copy;
@@ -66,10 +69,12 @@ macro_rules! impls {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, std::hash::Hash)]
-#[cfg_attr(feature = "serde", derive(DeserializeFromStr, SerializeDisplay))]
 pub struct ProteinSequence {
     amino_acids: Vec<u8>,
 }
+
+#[cfg(feature = "serde")]
+serde_utils::impl_stringlike!(ProteinSequence);
 
 impl ProteinSequence {
     fn new_unchecked(amino_acids: Vec<u8>) -> Self {
@@ -143,9 +148,47 @@ pub type DnaSequenceStrict = DnaSequence<Nucleotide>;
 pub type DnaSequenceAmbiguous = DnaSequence<NucleotideAmbiguous>;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, std::hash::Hash)]
-#[cfg_attr(feature = "serde", derive(DeserializeFromStr, SerializeDisplay))]
 pub struct DnaSequence<T: NucleotideLike> {
     dna: Vec<T>,
+}
+
+#[cfg(feature = "serde")]
+impl<'de, T: NucleotideLike> serde::Deserialize<'de> for DnaSequence<T> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        T: NucleotideLike,
+        D: serde::Deserializer<'de>,
+    {
+        struct Helper<T>(PhantomData<T>);
+        impl<'de, T: NucleotideLike> serde::de::Visitor<'de> for Helper<T> {
+            type Value = DnaSequence<T>;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(formatter, "a string")
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                value
+                    .parse::<Self::Value>()
+                    .map_err(serde::de::Error::custom)
+            }
+        }
+
+        deserializer.deserialize_str(Helper(PhantomData))
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<T: NucleotideLike> serde::Serialize for DnaSequence<T> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.collect_str(self)
+    }
 }
 
 impl<T: NucleotideLike> DnaSequence<T> {

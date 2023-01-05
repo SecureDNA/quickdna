@@ -9,7 +9,7 @@ use crate::errors::{CodonError, TranslationError};
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "serde")]
-use serde_with::{DeserializeFromStr, SerializeDisplay};
+use crate::serde_utils;
 
 /// A DNA nucleotide.
 ///
@@ -336,7 +336,6 @@ impl fmt::Display for NucleotideAmbiguous {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, std::hash::Hash)]
-#[cfg_attr(feature = "serde", derive(DeserializeFromStr, SerializeDisplay))]
 pub struct Codon(pub [Nucleotide; 3]);
 
 impl TryFrom<[u8; 3]> for Codon {
@@ -379,7 +378,6 @@ impl FromStr for Codon {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, std::hash::Hash)]
-#[cfg_attr(feature = "serde", derive(DeserializeFromStr, SerializeDisplay))]
 pub struct CodonAmbiguous(pub [NucleotideAmbiguous; 3]);
 
 impl TryFrom<[u8; 3]> for CodonAmbiguous {
@@ -433,6 +431,12 @@ impl CodonAmbiguous {
         })
     }
 }
+
+#[cfg(feature = "serde")]
+serde_utils::impl_stringlike!(Codon);
+
+#[cfg(feature = "serde")]
+serde_utils::impl_stringlike!(CodonAmbiguous);
 
 #[cfg(test)]
 mod tests {
