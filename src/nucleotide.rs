@@ -1,4 +1,7 @@
-use std::{fmt::{self, Write}, str::FromStr};
+use std::{
+    fmt::{self, Write},
+    str::FromStr,
+};
 
 use crate::errors::{CodonError, TranslationError};
 
@@ -433,12 +436,10 @@ impl CodonAmbiguous {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[cfg(feature = "serde")]
     #[test]
     fn test_serde_json() {
-        use crate::CodonAmbiguous;
+        use super::*;
 
         assert_eq!(
             serde_json::to_value(Nucleotide::A).unwrap(),
