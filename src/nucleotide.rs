@@ -1,9 +1,12 @@
-use std::fmt::{self, Write};
+use std::{fmt::{self, Write}, str::FromStr};
 
 use crate::errors::{CodonError, TranslationError};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+
+#[cfg(feature = "serde")]
+use serde_with::{DeserializeFromStr, SerializeDisplay};
 
 /// A DNA nucleotide.
 ///
@@ -330,8 +333,7 @@ impl fmt::Display for NucleotideAmbiguous {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, std::hash::Hash)]
-#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
-#[cfg_attr(feature = "serde", serde(try_from = "&str", into = "String"))]
+#[cfg_attr(feature = "serde", derive(DeserializeFromStr, SerializeDisplay))]
 pub struct Codon(pub [Nucleotide; 3]);
 
 impl TryFrom<[u8; 3]> for Codon {
@@ -364,24 +366,17 @@ impl fmt::Display for Codon {
     }
 }
 
-impl TryFrom<&str> for Codon {
-    type Error = CodonError;
+impl FromStr for Codon {
+    type Err = CodonError;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         let three: [u8; 3] = value.as_bytes().try_into()?;
         Ok(Self::try_from(three)?)
     }
 }
 
-impl From<Codon> for String {
-    fn from(value: Codon) -> Self {
-        value.to_string()
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, std::hash::Hash)]
-#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
-#[cfg_attr(feature = "serde", serde(try_from = "&str", into = "String"))]
+#[cfg_attr(feature = "serde", derive(DeserializeFromStr, SerializeDisplay))]
 pub struct CodonAmbiguous(pub [NucleotideAmbiguous; 3]);
 
 impl TryFrom<[u8; 3]> for CodonAmbiguous {
@@ -414,18 +409,12 @@ impl fmt::Display for CodonAmbiguous {
     }
 }
 
-impl TryFrom<&str> for CodonAmbiguous {
-    type Error = CodonError;
+impl FromStr for CodonAmbiguous {
+    type Err = CodonError;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         let three: [u8; 3] = value.as_bytes().try_into()?;
         Ok(Self::try_from(three)?)
-    }
-}
-
-impl From<CodonAmbiguous> for String {
-    fn from(value: CodonAmbiguous) -> Self {
-        value.to_string()
     }
 }
 

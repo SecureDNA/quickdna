@@ -18,8 +18,8 @@ pub enum TranslationError {
 
 #[derive(Debug, Clone, Error)]
 pub enum CodonError {
-    #[error("{}", .0)]
+    #[error("{:?}", .0)]
     BadTranslation(#[from] TranslationError),
-    #[error("{}", .0)]
+    #[error("{:?}", .0)]
     BadSlice(#[from] TryFromSliceError),
 }

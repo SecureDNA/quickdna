@@ -1398,13 +1398,18 @@ mod tests {
         let parser = FastaParser::<DnaSequence<NucleotideAmbiguous>>::lax();
         let string = ">Virus1\ncar \n>Virus2\nBAG";
         let file = parser.parse_str(string).unwrap();
-        let json = serde_json::to_string(&file).unwrap();
+        let json = serde_json::to_value(&file).unwrap();
         assert_eq!(
             json,
-            r#"{"records":[{"header":"Virus1","contents":"CAR","line_range":[1,3]},{"header":"Virus2","contents":"BAG","line_range":[3,5]}]}"#
+            serde_json::json!({
+                "records": [
+                    {"header": "Virus1", "contents": "CAR", "line_range": [1, 3]},
+                    {"header": "Virus2", "contents": "BAG", "line_range": [3, 5]}
+                ]
+            })
         );
         let round_trip: FastaFile<DnaSequence<NucleotideAmbiguous>> =
-            serde_json::from_str(&json).unwrap();
+            serde_json::from_value(json).unwrap();
         assert_eq!(file, round_trip);
     }
 
