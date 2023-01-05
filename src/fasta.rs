@@ -1344,7 +1344,7 @@ mod tests {
     #[cfg(feature = "serde")]
     #[test]
     fn test_fasta_serde_json() {
-        let parser = FastaParser::<DnaSequence<NucleotideAmbiguous>>::lax();
+        let parser = FastaParser::<DnaSequence<NucleotideAmbiguous>>::default();
         let string = ">Virus1\ncar \n>Virus2\nBAG";
         let file = parser.parse_str(string).unwrap();
         let json = serde_json::to_value(&file).unwrap();
