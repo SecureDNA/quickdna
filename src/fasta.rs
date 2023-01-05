@@ -76,8 +76,9 @@ impl<T> IntoIterator for FastaFile<T> {
 /// Settings for a fasta parser.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct FastaParseSettings {
-    /// If this flag is true, then successive headers in a FASTA file will be concatenated, instead of
-    /// generating empty records.
+    /// If this flag is true, then successive headers in a FASTA file will be
+    /// concatenated, instead of generating empty records. The default value is
+    /// `true`.
     ///
     /// ```rust
     /// use quickdna::{FastaParser, FastaParseSettings, FastaRecord};
@@ -117,8 +118,9 @@ pub struct FastaParseSettings {
     /// ```
     concatenate_headers: bool,
 
-    /// If this flag is true, content before the first header will be treated as a file comment and ignored. Otherwise,
-    /// it will be parsed as a sequence with an empty header.
+    /// If this flag is true, content before the first header will be treated as
+    /// a file comment and ignored. Otherwise, it will be parsed as a sequence
+    /// with an empty header. The default value is `false`.
     ///
     /// ```rust
     /// use quickdna::{FastaParser, FastaParseSettings, FastaRecord};
@@ -161,28 +163,12 @@ pub struct FastaParseSettings {
 
 // "Builder-lite" pattern: https://matklad.github.io/2022/05/29/builder-lite.html
 impl FastaParseSettings {
-    /// Initializes settings "strictly" (See [`Self::strict()`]).
+    /// Initializes settings to their defaults: concatenate headers, and
+    /// disallow a preceding comment.
     pub fn new() -> Self {
-        Self::strict()
-    }
-
-    /// Initializes settings "strictly":
-    /// * [`Self::concatenate_headers`]: false
-    /// * [`Self::allow_preceding_comment`]: false
-    pub fn strict() -> Self {
-        Self {
-            concatenate_headers: false,
-            allow_preceding_comment: false,
-        }
-    }
-
-    /// Initializes settings "laxly":
-    /// * [`Self::concatenate_headers`]: true
-    /// * [`Self::allow_preceding_comment`]: true
-    pub fn lax() -> Self {
         Self {
             concatenate_headers: true,
-            allow_preceding_comment: true,
+            allow_preceding_comment: false,
         }
     }
 
@@ -440,16 +426,6 @@ impl<T: FromStr> FastaParser<T> {
         }
     }
 
-    /// Construct a new FastaParser with strict settings (see [`FastaParseSettings::strict()`])
-    pub fn strict() -> Self {
-        Self::new(FastaParseSettings::strict())
-    }
-
-    /// Construct a new FastaParser with lax settings (see [`FastaParseSettings::lax()`])
-    pub fn lax() -> Self {
-        Self::new(FastaParseSettings::lax())
-    }
-
     pub fn parse<R: BufRead>(&self, handle: R) -> Result<FastaFile<T>, FastaParseError<T::Err>> {
         let mut records: Vec<FastaRecord<T>> = vec![];
         let mut state = ParserState::StartOfFile {
@@ -477,6 +453,13 @@ impl<T: FromStr> FastaParser<T> {
 
     pub fn parse_str(&self, s: &str) -> Result<FastaFile<T>, FastaParseError<T::Err>> {
         self.parse(s.as_bytes())
+    }
+}
+
+impl<T: FromStr> Default for FastaParser<T> {
+    /// Construct a new FastaParser with default settings (see [`FastaParseSettings::new()`])
+    fn default() -> Self {
+        Self::new(FastaParseSettings::default())
     }
 }
 
@@ -522,38 +505,18 @@ mod tests {
 
     /// Assert a parse matches the expected value with any combination of parser settings
     fn assert_parse_with_all_settings(s: &str, expected: Vec<FastaRecord<String>>) {
-        assert_parse!(
-            s,
-            FastaParser::<String>::new(FastaParseSettings {
-                concatenate_headers: true,
-                allow_preceding_comment: true
-            }),
-            expected
-        );
-        assert_parse!(
-            s,
-            FastaParser::<String>::new(FastaParseSettings {
-                concatenate_headers: true,
-                allow_preceding_comment: false
-            }),
-            expected
-        );
-        assert_parse!(
-            s,
-            FastaParser::<String>::new(FastaParseSettings {
-                concatenate_headers: false,
-                allow_preceding_comment: true
-            }),
-            expected
-        );
-        assert_parse!(
-            s,
-            FastaParser::<String>::new(FastaParseSettings {
-                concatenate_headers: false,
-                allow_preceding_comment: false
-            }),
-            expected
-        );
+        for concatenate_headers in [false, true] {
+            for allow_preceding_comment in [false, true] {
+                assert_parse!(
+                    s,
+                    FastaParser::<String>::new(FastaParseSettings {
+                        concatenate_headers,
+                        allow_preceding_comment,
+                    }),
+                    expected
+                );
+            }
+        }
     }
 
     /// Assert a parse matches the expected value with the given value of concatenate_headers,
@@ -563,22 +526,16 @@ mod tests {
         concatenate_headers: bool,
         expected: Vec<FastaRecord<String>>,
     ) {
-        assert_parse!(
-            s,
-            FastaParser::<String>::new(FastaParseSettings {
-                concatenate_headers,
-                allow_preceding_comment: true
-            }),
-            expected
-        );
-        assert_parse!(
-            s,
-            FastaParser::<String>::new(FastaParseSettings {
-                concatenate_headers,
-                allow_preceding_comment: false
-            }),
-            expected
-        );
+        for allow_preceding_comment in [false, true] {
+            assert_parse!(
+                s,
+                FastaParser::<String>::new(FastaParseSettings {
+                    concatenate_headers,
+                    allow_preceding_comment,
+                }),
+                expected
+            );
+        }
     }
 
     /// Assert a parse matches the expected value with the given value of allow_preceding_comment,
@@ -588,22 +545,16 @@ mod tests {
         allow_preceding_comment: bool,
         expected: Vec<FastaRecord<String>>,
     ) {
-        assert_parse!(
-            s,
-            FastaParser::<String>::new(FastaParseSettings {
-                concatenate_headers: true,
-                allow_preceding_comment
-            }),
-            expected
-        );
-        assert_parse!(
-            s,
-            FastaParser::<String>::new(FastaParseSettings {
-                concatenate_headers: false,
-                allow_preceding_comment
-            }),
-            expected
-        );
+        for concatenate_headers in [false, true] {
+            assert_parse!(
+                s,
+                FastaParser::<String>::new(FastaParseSettings {
+                    concatenate_headers,
+                    allow_preceding_comment,
+                }),
+                expected
+            );
+        }
     }
 
     /// Helper to panic if a closure doesn't complete within a specified Duration.
@@ -1159,7 +1110,7 @@ mod tests {
     fn test_dna_fasta() {
         assert_parse!(
             ">Virus1\nAAAA",
-            FastaParser::<DnaSequence<Nucleotide>>::strict(),
+            FastaParser::<DnaSequence<Nucleotide>>::default(),
             vec![FastaRecord {
                 header: "Virus1".to_string(),
                 contents: "AAAA".parse().unwrap(),
@@ -1172,7 +1123,7 @@ mod tests {
     fn test_dna_fasta_ambiguous() {
         assert_parse!(
             ">Virus1\nABCD",
-            FastaParser::<DnaSequence<NucleotideAmbiguous>>::strict(),
+            FastaParser::<DnaSequence<NucleotideAmbiguous>>::default(),
             vec![FastaRecord {
                 header: "Virus1".to_string(),
                 contents: "ABCD".parse().unwrap(),
@@ -1184,10 +1135,9 @@ mod tests {
     #[test]
     fn test_dna_fasta_strict() {
         // Strict as in "when parsing Nucleotide, disallow ambiguity codes".
-        // No relation to the FastaParser `strict()` call.
         assert_parse_err!(
             ">Virus1\nABCD",
-            FastaParser::<DnaSequence<Nucleotide>>::strict(),
+            FastaParser::<DnaSequence<Nucleotide>>::default(),
             FastaParseError::ParseError(TranslationError::UnexpectedAmbiguousNucleotide('B'))
         );
     }
@@ -1196,7 +1146,7 @@ mod tests {
     fn test_dna_fasta_multiple() {
         assert_parse!(
             ">Virus1\nAAAA\nAAAA\n>Virus2\nCCCC\nCCCC\n",
-            FastaParser::<DnaSequence<Nucleotide>>::strict(),
+            FastaParser::<DnaSequence<Nucleotide>>::default(),
             vec![
                 FastaRecord {
                     header: "Virus1".to_string(),
@@ -1212,7 +1162,7 @@ mod tests {
         );
         assert_parse!(
             ">Virus1\nAAAA\nAAAA\n>Virus2\nCCCC\nRRRR\n",
-            FastaParser::<DnaSequence<NucleotideAmbiguous>>::strict(),
+            FastaParser::<DnaSequence<NucleotideAmbiguous>>::default(),
             vec![
                 FastaRecord {
                     header: "Virus1".to_string(),
@@ -1232,7 +1182,7 @@ mod tests {
     fn test_dna_dna_whitespace() {
         assert_parse!(
             ">Virus1\nAAAA \n",
-            FastaParser::<DnaSequence<Nucleotide>>::strict(),
+            FastaParser::<DnaSequence<Nucleotide>>::default(),
             vec![FastaRecord {
                 header: "Virus1".to_string(),
                 contents: "AAAA".parse().unwrap(),
@@ -1242,7 +1192,7 @@ mod tests {
 
         assert_parse!(
             ">Virus1\n  AAAA\tBCD \t\n",
-            FastaParser::<DnaSequence<NucleotideAmbiguous>>::strict(),
+            FastaParser::<DnaSequence<NucleotideAmbiguous>>::default(),
             vec![FastaRecord {
                 header: "Virus1".to_string(),
                 contents: "AAAABCD".parse().unwrap(),
@@ -1255,12 +1205,12 @@ mod tests {
     fn test_dna_invalid_dna() {
         assert_parse_err!(
             ">Virus1\nAAAelephant",
-            FastaParser::<DnaSequence<Nucleotide>>::strict(),
+            FastaParser::<DnaSequence<Nucleotide>>::default(),
             FastaParseError::ParseError(TranslationError::BadNucleotide('e'))
         );
         assert_parse_err!(
             ">Virus1\nAAAelephant",
-            FastaParser::<DnaSequence<NucleotideAmbiguous>>::strict(),
+            FastaParser::<DnaSequence<NucleotideAmbiguous>>::default(),
             FastaParseError::ParseError(TranslationError::BadNucleotide('e'))
         );
     }
@@ -1269,12 +1219,12 @@ mod tests {
     fn test_dna_invalid_dna_multiple() {
         assert_parse_err!(
             ">Virus1\nAAAA\n>Virus2\nAAAAelephant",
-            FastaParser::<DnaSequence<Nucleotide>>::strict(),
+            FastaParser::<DnaSequence<Nucleotide>>::default(),
             FastaParseError::ParseError(TranslationError::BadNucleotide('e'))
         );
         assert_parse_err!(
             ">Virus1\nAAAA\n>Virus2\nAAAAelephant",
-            FastaParser::<DnaSequence<NucleotideAmbiguous>>::strict(),
+            FastaParser::<DnaSequence<NucleotideAmbiguous>>::default(),
             FastaParseError::ParseError(TranslationError::BadNucleotide('e'))
         );
     }
@@ -1283,12 +1233,12 @@ mod tests {
     fn test_dna_invalid_dna_unicode() {
         assert_parse_err!(
             ">Virus1\nAAčCCG\n",
-            FastaParser::<DnaSequence<Nucleotide>>::strict(),
+            FastaParser::<DnaSequence<Nucleotide>>::default(),
             FastaParseError::ParseError(TranslationError::NonAsciiByte(196))
         );
         assert_parse_err!(
             ">Virus1\nAAčCCG\n",
-            FastaParser::<DnaSequence<NucleotideAmbiguous>>::strict(),
+            FastaParser::<DnaSequence<NucleotideAmbiguous>>::default(),
             FastaParseError::ParseError(TranslationError::NonAsciiByte(196))
         );
     }
@@ -1297,7 +1247,7 @@ mod tests {
     fn test_protein_fasta() {
         assert_parse!(
             ">Virus1\nAAAA",
-            FastaParser::<ProteinSequence>::strict(),
+            FastaParser::<ProteinSequence>::default(),
             vec![FastaRecord {
                 header: "Virus1".to_string(),
                 contents: "AAAA".parse().unwrap(),
@@ -1310,7 +1260,7 @@ mod tests {
     fn test_protein_fasta_multiple() {
         assert_parse!(
             ">Virus1\nAAAA\nAAAA\n>Virus2\nCCCC\nCCCC\n",
-            FastaParser::<ProteinSequence>::strict(),
+            FastaParser::<ProteinSequence>::default(),
             vec![
                 FastaRecord {
                     header: "Virus1".to_string(),
@@ -1328,9 +1278,8 @@ mod tests {
 
     #[test]
     fn test_duplicate_header_lines() {
-        assert_parse!(
+        assert_parse_with_all_settings(
             ">Virus1\nAAAA\nAAAA\n>Virus1\nCCCC\nCCCC\n",
-            FastaParser::<DnaSequence<Nucleotide>>::strict(),
             vec![
                 FastaRecord {
                     header: "Virus1".to_string(),
@@ -1342,13 +1291,13 @@ mod tests {
                     contents: "CCCCCCCC".parse().unwrap(),
                     line_range: (4, 7),
                 },
-            ]
+            ],
         );
     }
 
     #[test]
     fn test_to_string() {
-        let parser = FastaParser::<DnaSequence<Nucleotide>>::lax();
+        let parser = FastaParser::<DnaSequence<Nucleotide>>::default();
         let string = ">Virus1\nAC\nT\n>Empty\n\n>Virus2\n>with many\n>comment lines\nC  AT";
         let parsed = parser.parse_str(string).unwrap();
 
@@ -1366,7 +1315,7 @@ mod tests {
 
     #[test]
     fn test_fasta_file_into_iter() {
-        let parser = FastaParser::<DnaSequence<Nucleotide>>::lax();
+        let parser = FastaParser::<DnaSequence<Nucleotide>>::default();
         let string = ">Virus1\nCAT\n>Virus2\nTAG";
 
         // Existing code assumes we can loop over the result of of parse_str... let's explicitly do that.
