@@ -3,7 +3,8 @@
 /// `FromStr` impls.
 ///
 /// (This is used for example to serialize codons as `"ACG"` rather than
-/// `["A","C","G"]`.)
+/// `["A","C","G"]`. We could equivalently use `serde_with::{DeserializeFromStr,
+/// SerializeDisplay}`, but it's not worth the extra dependency.)
 macro_rules! impl_stringlike {
     ($type:ty) => {
         #[cfg(feature = "serde")]
