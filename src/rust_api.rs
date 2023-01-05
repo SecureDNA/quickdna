@@ -12,6 +12,9 @@ pub use crate::trans_table::TranslationTable;
 
 use crate::trans_table::reverse_complement;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 pub trait BaseSequence: std::marker::Sized {
     type Item: Into<u8> + Copy;
 
@@ -63,6 +66,8 @@ macro_rules! impls {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, std::hash::Hash)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serde", serde(try_from = "&str", into = "String"))]
 pub struct ProteinSequence {
     amino_acids: Vec<u8>,
 }
@@ -127,6 +132,14 @@ impl TryFrom<Vec<u8>> for ProteinSequence {
     }
 }
 
+impl TryFrom<&str> for ProteinSequence {
+    type Error = TranslationError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::try_from(value.as_bytes())
+    }
+}
+
 impl FromStr for ProteinSequence {
     type Err = TranslationError;
 
@@ -139,6 +152,15 @@ pub type DnaSequenceStrict = DnaSequence<Nucleotide>;
 pub type DnaSequenceAmbiguous = DnaSequence<NucleotideAmbiguous>;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, std::hash::Hash)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(
+    feature = "serde",
+    serde(
+        try_from = "&str",
+        into = "String",
+        bound = "DnaSequence<T>: Into<String>"
+    )
+)]
 pub struct DnaSequence<T: NucleotideLike> {
     dna: Vec<T>,
 }
@@ -266,6 +288,14 @@ impl<T: NucleotideLike> TryFrom<Vec<u8>> for DnaSequence<T> {
 
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
         Self::try_from(&value[..])
+    }
+}
+
+impl<T: NucleotideLike> TryFrom<&str> for DnaSequence<T> {
+    type Error = TranslationError;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        Self::try_from(s.as_bytes())
     }
 }
 
@@ -672,5 +702,22 @@ mod tests {
         protein("angtnattag ");
         protein(" angtnattag ");
         protein(" an  gtnattag \t");
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_serde_json() {
+        assert_eq!(
+            serde_json::to_value(dna("acgt bdn\t")).unwrap(),
+            serde_json::json!("ACGTBDN")
+        );
+        assert_eq!(
+            serde_json::to_value(dna_strict("acg t\t")).unwrap(),
+            serde_json::json!("ACGT")
+        );
+        assert_eq!(
+            serde_json::to_value(protein("arnd")).unwrap(),
+            serde_json::json!("ARND")
+        );
     }
 }

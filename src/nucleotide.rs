@@ -1,11 +1,15 @@
 use std::fmt::{self, Write};
 
-use crate::errors::TranslationError;
+use crate::errors::{CodonError, TranslationError};
+
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 /// A DNA nucleotide.
 ///
 /// Sorts in ATCG order, not alphabetical.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, std::hash::Hash)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[repr(u8)]
 pub enum Nucleotide {
     A = 0b0001,
@@ -16,6 +20,7 @@ pub enum Nucleotide {
 
 /// A DNA nucleotide, or an IUPAC ambiguity code representing a set of possible nucleotides.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, std::hash::Hash)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[repr(u8)]
 pub enum NucleotideAmbiguous {
     A = Nucleotide::A as u8,
@@ -325,6 +330,8 @@ impl fmt::Display for NucleotideAmbiguous {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, std::hash::Hash)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serde", serde(try_from = "&str", into = "String"))]
 pub struct Codon(pub [Nucleotide; 3]);
 
 impl TryFrom<[u8; 3]> for Codon {
@@ -357,7 +364,24 @@ impl fmt::Display for Codon {
     }
 }
 
+impl TryFrom<&str> for Codon {
+    type Error = CodonError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let three: [u8; 3] = value.as_bytes().try_into()?;
+        Ok(Self::try_from(three)?)
+    }
+}
+
+impl From<Codon> for String {
+    fn from(value: Codon) -> Self {
+        value.to_string()
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, std::hash::Hash)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serde", serde(try_from = "&str", into = "String"))]
 pub struct CodonAmbiguous(pub [NucleotideAmbiguous; 3]);
 
 impl TryFrom<[u8; 3]> for CodonAmbiguous {
@@ -390,6 +414,21 @@ impl fmt::Display for CodonAmbiguous {
     }
 }
 
+impl TryFrom<&str> for CodonAmbiguous {
+    type Error = CodonError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let three: [u8; 3] = value.as_bytes().try_into()?;
+        Ok(Self::try_from(three)?)
+    }
+}
+
+impl From<CodonAmbiguous> for String {
+    fn from(value: CodonAmbiguous) -> Self {
+        value.to_string()
+    }
+}
+
 impl CodonAmbiguous {
     pub fn possibilities(&self) -> impl Iterator<Item = Codon> + '_ {
         self.0[0].possibilities().iter().flat_map(move |&a| {
@@ -400,5 +439,38 @@ impl CodonAmbiguous {
                     .map(move |&c| Codon([a, b, c]))
             })
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_serde_json() {
+        use crate::CodonAmbiguous;
+
+        assert_eq!(
+            serde_json::to_value(Nucleotide::A).unwrap(),
+            serde_json::json!("A")
+        );
+        assert_eq!(
+            serde_json::to_value(NucleotideAmbiguous::A).unwrap(),
+            serde_json::json!("A")
+        );
+        assert_eq!(
+            serde_json::to_value(Codon([Nucleotide::A, Nucleotide::C, Nucleotide::G])).unwrap(),
+            serde_json::json!("ACG")
+        );
+        assert_eq!(
+            serde_json::to_value(CodonAmbiguous([
+                NucleotideAmbiguous::A,
+                NucleotideAmbiguous::B,
+                NucleotideAmbiguous::C
+            ]))
+            .unwrap(),
+            serde_json::json!("ABC")
+        );
     }
 }

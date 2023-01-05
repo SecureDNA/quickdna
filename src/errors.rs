@@ -1,3 +1,5 @@
+use std::array::TryFromSliceError;
+
 use thiserror::Error;
 
 #[derive(Debug, Clone, Error)]
@@ -12,4 +14,12 @@ pub enum TranslationError {
     UnexpectedAmbiguousNucleotide(char),
     #[error("not a ncbi translation table: {}", .0)]
     BadTranslationTable(u8),
+}
+
+#[derive(Debug, Clone, Error)]
+pub enum CodonError {
+    #[error("{}", .0)]
+    BadTranslation(#[from] TranslationError),
+    #[error("{}", .0)]
+    BadSlice(#[from] TryFromSliceError),
 }
