@@ -23,3 +23,6 @@ pub use python_api::*;
 
 #[cfg(feature = "quickcheck")]
 mod quickcheck;
+
+#[cfg(feature = "serde")]
+mod serde_utils;

@@ -6,7 +6,11 @@ use std::str::FromStr;
 
 use thiserror::Error;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct FastaRecord<T> {
     /// The header of this record, without the leading character (usually '>')
     /// Depending on the content and parser settings, this header may be empty, and may contain newlines.
@@ -19,6 +23,7 @@ pub struct FastaRecord<T> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct FastaFile<T> {
     /// The records parsed from the file.
     pub records: Vec<FastaRecord<T>>,
@@ -1334,6 +1339,27 @@ mod tests {
                 }
             ]
         );
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_fasta_serde_json() {
+        let parser = FastaParser::<DnaSequence<NucleotideAmbiguous>>::default();
+        let string = ">Virus1\ncar \n>Virus2\nBAG";
+        let file = parser.parse_str(string).unwrap();
+        let json = serde_json::to_value(&file).unwrap();
+        assert_eq!(
+            json,
+            serde_json::json!({
+                "records": [
+                    {"header": "Virus1", "contents": "CAR", "line_range": [1, 3]},
+                    {"header": "Virus2", "contents": "BAG", "line_range": [3, 5]}
+                ]
+            })
+        );
+        let round_trip: FastaFile<DnaSequence<NucleotideAmbiguous>> =
+            serde_json::from_value(json).unwrap();
+        assert_eq!(file, round_trip);
     }
 
     // TODO: when we add validation for ProteinSequence, add tests for that here

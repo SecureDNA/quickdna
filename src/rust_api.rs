@@ -12,6 +12,12 @@ pub use crate::trans_table::TranslationTable;
 
 use crate::trans_table::reverse_complement;
 
+#[cfg(feature = "serde")]
+use std::marker::PhantomData;
+
+#[cfg(feature = "serde")]
+use crate::serde_utils;
+
 pub trait BaseSequence: std::marker::Sized {
     type Item: Into<u8> + Copy;
 
@@ -66,6 +72,9 @@ macro_rules! impls {
 pub struct ProteinSequence {
     amino_acids: Vec<u8>,
 }
+
+#[cfg(feature = "serde")]
+serde_utils::impl_stringlike!(ProteinSequence);
 
 impl ProteinSequence {
     fn new_unchecked(amino_acids: Vec<u8>) -> Self {
@@ -141,6 +150,27 @@ pub type DnaSequenceAmbiguous = DnaSequence<NucleotideAmbiguous>;
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, std::hash::Hash)]
 pub struct DnaSequence<T: NucleotideLike> {
     dna: Vec<T>,
+}
+
+#[cfg(feature = "serde")]
+impl<'de, T: NucleotideLike> serde::Deserialize<'de> for DnaSequence<T> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use crate::serde_utils::FromStrVisitor;
+        deserializer.deserialize_str(FromStrVisitor(PhantomData))
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<T: NucleotideLike> serde::Serialize for DnaSequence<T> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.collect_str(self)
+    }
 }
 
 impl<T: NucleotideLike> DnaSequence<T> {
@@ -672,5 +702,22 @@ mod tests {
         protein("angtnattag ");
         protein(" angtnattag ");
         protein(" an  gtnattag \t");
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_serde_json() {
+        assert_eq!(
+            serde_json::to_value(dna("acgt bdn\t")).unwrap(),
+            serde_json::json!("ACGTBDN")
+        );
+        assert_eq!(
+            serde_json::to_value(dna_strict("acg t\t")).unwrap(),
+            serde_json::json!("ACGT")
+        );
+        assert_eq!(
+            serde_json::to_value(protein("arnd")).unwrap(),
+            serde_json::json!("ARND")
+        );
     }
 }
