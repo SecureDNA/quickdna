@@ -1,3 +1,27 @@
+use std::{
+    fmt::{self, Display},
+    marker::PhantomData,
+    str::FromStr,
+};
+
+/// A visitor object that uses T's FromStr impl to parse visited strings.
+pub struct FromStrVisitor<T>(pub PhantomData<T>);
+
+impl<'de, T: FromStr> serde::de::Visitor<'de> for FromStrVisitor<T>
+where
+    <T as FromStr>::Err: Display,
+{
+    type Value = T;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "a string")
+    }
+
+    fn visit_str<E: serde::de::Error>(self, value: &str) -> Result<Self::Value, E> {
+        value.parse().map_err(serde::de::Error::custom)
+    }
+}
+
 /// Make "string-like" implementations of `serde::Deserialize` and
 /// `serde::Serialize` for the given type, using that type's `Display` and
 /// `FromStr` impls.
@@ -13,25 +37,8 @@ macro_rules! impl_stringlike {
             where
                 D: serde::Deserializer<'de>,
             {
-                struct Helper;
-                impl<'de> serde::de::Visitor<'de> for Helper {
-                    type Value = $type;
-
-                    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                        write!(formatter, "a string")
-                    }
-
-                    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-                    where
-                        E: serde::de::Error,
-                    {
-                        value
-                            .parse::<Self::Value>()
-                            .map_err(serde::de::Error::custom)
-                    }
-                }
-
-                deserializer.deserialize_str(Helper)
+                use crate::serde_utils::FromStrVisitor;
+                deserializer.deserialize_str(FromStrVisitor(core::marker::PhantomData))
             }
         }
 

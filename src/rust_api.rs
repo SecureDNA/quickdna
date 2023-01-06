@@ -156,28 +156,10 @@ pub struct DnaSequence<T: NucleotideLike> {
 impl<'de, T: NucleotideLike> serde::Deserialize<'de> for DnaSequence<T> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        T: NucleotideLike,
         D: serde::Deserializer<'de>,
     {
-        struct Helper<T>(PhantomData<T>);
-        impl<'de, T: NucleotideLike> serde::de::Visitor<'de> for Helper<T> {
-            type Value = DnaSequence<T>;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                write!(formatter, "a string")
-            }
-
-            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                value
-                    .parse::<Self::Value>()
-                    .map_err(serde::de::Error::custom)
-            }
-        }
-
-        deserializer.deserialize_str(Helper(PhantomData))
+        use crate::serde_utils::FromStrVisitor;
+        deserializer.deserialize_str(FromStrVisitor(PhantomData))
     }
 }
 
