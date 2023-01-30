@@ -4,7 +4,7 @@
 pub trait Extendable {
     fn empty() -> Self;
     fn is_empty(&self) -> bool;
-    fn extend(&mut self, other: Self) -> ();
+    fn extend(&mut self, other: Self);
 }
 
 impl Extendable for String {
@@ -17,7 +17,7 @@ impl Extendable for String {
         self.trim().is_empty()
     }
 
-    fn extend(&mut self, other: Self) -> () {
+    fn extend(&mut self, other: Self) {
         self.push_str(&other)
     }
 }

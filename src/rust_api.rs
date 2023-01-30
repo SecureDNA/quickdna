@@ -4,12 +4,12 @@ use std::str::FromStr;
 
 use smallvec::SmallVec;
 
-use crate::Extendable;
 pub use crate::errors::TranslationError;
 pub use crate::nucleotide::{
     Codon, CodonAmbiguous, Nucleotide, NucleotideAmbiguous, NucleotideLike,
 };
 pub use crate::trans_table::TranslationTable;
+use crate::Extendable;
 
 use crate::trans_table::reverse_complement;
 
@@ -76,14 +76,16 @@ pub struct ProteinSequence {
 
 impl Extendable for ProteinSequence {
     fn empty() -> Self {
-        ProteinSequence { amino_acids: vec![] }
+        ProteinSequence {
+            amino_acids: vec![],
+        }
     }
 
     fn is_empty(&self) -> bool {
         self.amino_acids.is_empty()
     }
 
-    fn extend(&mut self, other: Self) -> () {
+    fn extend(&mut self, other: Self) {
         self.amino_acids.extend_from_slice(&other.amino_acids)
     }
 }
@@ -176,7 +178,7 @@ impl<N: NucleotideLike> Extendable for DnaSequence<N> {
         self.dna.is_empty()
     }
 
-    fn extend(&mut self, other: Self) -> () {
+    fn extend(&mut self, other: Self) {
         self.dna.extend_from_slice(&other.dna)
     }
 }
