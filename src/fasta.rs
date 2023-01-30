@@ -9,6 +9,9 @@ use thiserror::Error;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+use crate::errors::Located;
+use crate::Extendable;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct FastaRecord<T> {
@@ -27,23 +30,6 @@ pub struct FastaRecord<T> {
 pub struct FastaFile<T> {
     /// The records parsed from the file.
     pub records: Vec<FastaRecord<T>>,
-}
-
-impl FastaRecord<String> {
-    /// Try to parse a string-containing record into a type that impls [`core::str::FromStr`].
-    pub fn parse<T: FromStr>(self) -> Result<FastaRecord<T>, T::Err> {
-        let Self {
-            header,
-            contents,
-            line_range,
-        } = self;
-        let contents = contents.parse()?;
-        Ok(FastaRecord {
-            header,
-            contents,
-            line_range,
-        })
-    }
 }
 
 impl<T: Display> Display for FastaRecord<T> {
@@ -191,10 +177,34 @@ impl Default for FastaParseSettings {
     }
 }
 
-enum ParserState {
+pub trait FastaContent: Extendable {
+    type Err;
+    fn parse(line_number: usize, line: &str) -> Result<Self, Located<FastaParseError<Self::Err>>>
+    where
+        Self: Sized;
+}
+
+impl<T: FromStr + Extendable> FastaContent for T {
+    type Err = T::Err;
+
+    fn parse(line_number: usize, line: &str) -> Result<Self, Located<FastaParseError<Self::Err>>>
+    where
+        Self: Sized,
+    {
+        match FromStr::from_str(line) {
+            Ok(s) => Ok(s),
+            Err(e) => Err(Located {
+                line_number,
+                error: FastaParseError::ParseError(e),
+            }),
+        }
+    }
+}
+
+enum ParserState<T: FastaContent> {
     StartOfFile {
         /// only non-empty if settings.allow_preceding_comment is false
-        contents: String,
+        contents: T,
     },
     InHeader {
         start_line_number: usize,
@@ -203,11 +213,11 @@ enum ParserState {
     InRecord {
         start_line_number: usize,
         header: String,
-        contents: String,
+        contents: T,
     },
 }
 
-impl ParserState {
+impl<T: FastaContent> ParserState<T> {
     /// Pump the state machine and maybe emit a record, if this line completes a record, along with
     /// a new state
     fn advance_line(
@@ -215,7 +225,7 @@ impl ParserState {
         settings: &FastaParseSettings,
         line: &str,
         line_number: usize,
-    ) -> (Self, Option<FastaRecord<String>>) {
+    ) -> Result<(Self, Option<FastaRecord<T>>), Located<FastaParseError<T::Err>>> {
         let new_header = try_parse_header(line);
         match (self, new_header) {
             // start of file, and we have a header line => start a new record,
@@ -223,7 +233,7 @@ impl ParserState {
             // on parse settings
             (ParserState::StartOfFile { contents }, Some(new_header)) => {
                 // don't emit if the settings don't want it, or if the record would just be whitespace
-                let record = if settings.allow_preceding_comment || contents.trim().is_empty() {
+                let record = if settings.allow_preceding_comment || contents.is_empty() {
                     None
                 } else {
                     Some(FastaRecord {
@@ -233,22 +243,22 @@ impl ParserState {
                     })
                 };
 
-                (
+                Ok((
                     Self::InHeader {
                         start_line_number: line_number,
                         header: new_header.to_string(),
                     },
                     record,
-                )
+                ))
             }
             // start of file, no header line yet => maybe store this line in content,
             // if we need to emit it later
             (ParserState::StartOfFile { mut contents }, None) => {
                 if !settings.allow_preceding_comment {
                     // only bother to keep contents updated if we need to emit it
-                    contents.push_str(line);
+                    contents.extend(T::parse(line_number, line)?);
                 }
-                (Self::StartOfFile { contents }, None)
+                Ok((Self::StartOfFile { contents }, None))
             }
 
             // In header, and we have a new header => either concatenate the headers
@@ -263,25 +273,25 @@ impl ParserState {
                 if settings.concatenate_headers {
                     header.push('\n');
                     header.push_str(new_header);
-                    (
+                    Ok((
                         Self::InHeader {
                             start_line_number,
                             header,
                         },
                         None,
-                    )
+                    ))
                 } else {
-                    (
+                    Ok((
                         Self::InHeader {
                             start_line_number: line_number,
                             header: new_header.to_string(),
                         },
                         Some(FastaRecord {
                             header,
-                            contents: "".to_string(),
+                            contents: T::empty(),
                             line_range: (start_line_number, line_number),
                         }),
-                    )
+                    ))
                 }
             }
             // in header and we don't have a new header => start of record content
@@ -291,14 +301,14 @@ impl ParserState {
                     header,
                 },
                 None,
-            ) => (
+            ) => Ok((
                 Self::InRecord {
                     start_line_number,
                     header,
-                    contents: line.to_string(),
+                    contents: T::parse(line_number, line)?,
                 },
                 None,
-            ),
+            )),
 
             // in record and we have a new header => start of a new header
             (
@@ -308,7 +318,7 @@ impl ParserState {
                     contents,
                 },
                 Some(new_header),
-            ) => (
+            ) => Ok((
                 Self::InHeader {
                     start_line_number: line_number,
                     header: new_header.to_string(),
@@ -318,7 +328,7 @@ impl ParserState {
                     contents,
                     line_range: (start_line_number, line_number),
                 }),
-            ),
+            )),
             // in record and we don't have a new header => continue record
             (
                 ParserState::InRecord {
@@ -328,29 +338,20 @@ impl ParserState {
                 },
                 None,
             ) => {
-                if line.is_empty() {
+                if !line.is_empty() {
                     // don't push an empty line to a record at the end of a file with a trailing newline
                     // (if this isn't the EOF, the line numbers will continue and pushing an empty line would
                     // have been a no-op anyways)
-                    (
-                        Self::InRecord {
-                            start_line_number,
-                            header,
-                            contents,
-                        },
-                        None,
-                    )
-                } else {
-                    contents.push_str(line);
-                    (
-                        Self::InRecord {
-                            start_line_number,
-                            header,
-                            contents,
-                        },
-                        None,
-                    )
+                    contents.extend(T::parse(line_number, line)?);
                 }
+                Ok((
+                    Self::InRecord {
+                        start_line_number,
+                        header,
+                        contents,
+                    },
+                    None,
+                ))
             }
         }
     }
@@ -364,12 +365,12 @@ impl ParserState {
         self,
         settings: &FastaParseSettings,
         eof_line_number: usize,
-    ) -> Option<FastaRecord<String>> {
+    ) -> Option<FastaRecord<T>> {
         match self {
             // start of file => maybe emit contents as a headerless record, depending on settings
             ParserState::StartOfFile { contents } => {
                 // again, don't emit if settings don't want it or the record would just be whitespace
-                if settings.allow_preceding_comment || contents.trim().is_empty() {
+                if settings.allow_preceding_comment || contents.is_empty() {
                     None
                 } else {
                     Some(FastaRecord {
@@ -386,7 +387,7 @@ impl ParserState {
                 header,
             } => Some(FastaRecord {
                 header,
-                contents: "".to_string(),
+                contents: T::empty(),
                 line_range: (start_line_number, eof_line_number),
             }),
 
@@ -412,12 +413,12 @@ pub enum FastaParseError<ParseError> {
     ParseError(#[source] ParseError), // can't use #[from] due to generic impl clash
 }
 
-pub struct FastaParser<T: FromStr> {
+pub struct FastaParser<T: FastaContent> {
     settings: FastaParseSettings,
     _marker: std::marker::PhantomData<T>,
 }
 
-impl<T: FromStr> FastaParser<T> {
+impl<T: FastaContent> FastaParser<T> {
     /// Construct a new FastaParser with the given [`FastaParseSettings`]
     pub fn new(settings: FastaParseSettings) -> Self {
         Self {
@@ -426,37 +427,43 @@ impl<T: FromStr> FastaParser<T> {
         }
     }
 
-    pub fn parse<R: BufRead>(&self, handle: R) -> Result<FastaFile<T>, FastaParseError<T::Err>> {
+    pub fn parse<R: BufRead>(
+        &self,
+        handle: R,
+    ) -> Result<FastaFile<T>, Located<FastaParseError<T::Err>>> {
         let mut records: Vec<FastaRecord<T>> = vec![];
         let mut state = ParserState::StartOfFile {
-            contents: "".to_string(),
+            contents: T::empty(),
         };
 
         let mut line_number = 0;
         for (idx, line) in handle.lines().enumerate() {
-            let line = line?;
             line_number = idx + 1;
+            let line = line.map_err(|e| Located {
+                line_number,
+                error: e.into(),
+            })?;
 
-            let (new_state, record) = state.advance_line(&self.settings, &line, line_number);
+            let (new_state, record) = state.advance_line(&self.settings, &line, line_number)?;
             state = new_state;
             if let Some(record) = record {
-                records.push(record.parse().map_err(FastaParseError::ParseError)?);
+                records.push(record);
             }
         }
 
         if let Some(record) = state.advance_eof(&self.settings, line_number + 1) {
-            records.push(record.parse().map_err(FastaParseError::ParseError)?);
+            records.push(record);
         }
 
         Ok(FastaFile { records })
     }
 
-    pub fn parse_str(&self, s: &str) -> Result<FastaFile<T>, FastaParseError<T::Err>> {
+    pub fn parse_str(&self, s: &str) -> Result<FastaFile<T>, Located<FastaParseError<T::Err>>> {
         self.parse(s.as_bytes())
     }
 }
 
-impl<T: FromStr> Default for FastaParser<T> {
+impl<T: FastaContent> Default for FastaParser<T> {
     /// Construct a new FastaParser with default settings (see [`FastaParseSettings::new()`])
     fn default() -> Self {
         Self::new(FastaParseSettings::default())
@@ -495,11 +502,16 @@ mod tests {
     macro_rules! assert_parse_err {
         ($testcase:expr, $parser:expr, $match:pat) => {
             // we use matches! since io::Error doesn't have a PartialEq impl
-            assert!(
-                matches!($parser.parse_str($testcase).unwrap_err(), $match),
-                "settings = {:?}",
-                $parser.settings
-            )
+            {
+                let err = $parser.parse_str($testcase).unwrap_err();
+                assert!(
+                    matches!(err, $match),
+                    "settings = {:?}, actual = {:?}, expected = {:?}",
+                    $parser.settings,
+                    err,
+                    stringify!($match)
+                )
+            }
         };
     }
 
@@ -1138,7 +1150,12 @@ mod tests {
         assert_parse_err!(
             ">Virus1\nABCD",
             FastaParser::<DnaSequence<Nucleotide>>::default(),
-            FastaParseError::ParseError(TranslationError::UnexpectedAmbiguousNucleotide('B'))
+            Located {
+                line_number: 2,
+                error: FastaParseError::ParseError(
+                    TranslationError::UnexpectedAmbiguousNucleotide('B')
+                )
+            }
         );
     }
 
@@ -1206,12 +1223,18 @@ mod tests {
         assert_parse_err!(
             ">Virus1\nAAAelephant",
             FastaParser::<DnaSequence<Nucleotide>>::default(),
-            FastaParseError::ParseError(TranslationError::BadNucleotide('e'))
+            Located {
+                line_number: 2,
+                error: FastaParseError::ParseError(TranslationError::BadNucleotide('e'))
+            }
         );
         assert_parse_err!(
             ">Virus1\nAAAelephant",
             FastaParser::<DnaSequence<NucleotideAmbiguous>>::default(),
-            FastaParseError::ParseError(TranslationError::BadNucleotide('e'))
+            Located {
+                line_number: 2,
+                error: FastaParseError::ParseError(TranslationError::BadNucleotide('e'))
+            }
         );
     }
 
@@ -1220,12 +1243,18 @@ mod tests {
         assert_parse_err!(
             ">Virus1\nAAAA\n>Virus2\nAAAAelephant",
             FastaParser::<DnaSequence<Nucleotide>>::default(),
-            FastaParseError::ParseError(TranslationError::BadNucleotide('e'))
+            Located {
+                line_number: 4,
+                error: FastaParseError::ParseError(TranslationError::BadNucleotide('e'))
+            }
         );
         assert_parse_err!(
             ">Virus1\nAAAA\n>Virus2\nAAAAelephant",
             FastaParser::<DnaSequence<NucleotideAmbiguous>>::default(),
-            FastaParseError::ParseError(TranslationError::BadNucleotide('e'))
+            Located {
+                line_number: 4,
+                error: FastaParseError::ParseError(TranslationError::BadNucleotide('e'))
+            }
         );
     }
 
@@ -1234,12 +1263,18 @@ mod tests {
         assert_parse_err!(
             ">Virus1\nAAčCCG\n",
             FastaParser::<DnaSequence<Nucleotide>>::default(),
-            FastaParseError::ParseError(TranslationError::NonAsciiByte(196))
+            Located {
+                line_number: 2,
+                error: FastaParseError::ParseError(TranslationError::NonAsciiByte(196))
+            }
         );
         assert_parse_err!(
             ">Virus1\nAAčCCG\n",
             FastaParser::<DnaSequence<NucleotideAmbiguous>>::default(),
-            FastaParseError::ParseError(TranslationError::NonAsciiByte(196))
+            Located {
+                line_number: 2,
+                error: FastaParseError::ParseError(TranslationError::NonAsciiByte(196))
+            }
         );
     }
 
@@ -1339,6 +1374,16 @@ mod tests {
                 }
             ]
         );
+    }
+
+    #[test]
+    fn test_line_number_error_display() {
+        let parser = FastaParser::<DnaSequence<Nucleotide>>::default();
+        let string = ">Virus1\nAAA\nCCCxGGG";
+        assert_eq!(
+            parser.parse_str(string).unwrap_err().to_string(),
+            "on line 3: error parsing record: bad nucleotide: 'x'"
+        )
     }
 
     #[cfg(feature = "serde")]

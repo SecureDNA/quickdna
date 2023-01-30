@@ -4,6 +4,7 @@ use std::str::FromStr;
 
 use smallvec::SmallVec;
 
+use crate::Extendable;
 pub use crate::errors::TranslationError;
 pub use crate::nucleotide::{
     Codon, CodonAmbiguous, Nucleotide, NucleotideAmbiguous, NucleotideLike,
@@ -71,6 +72,20 @@ macro_rules! impls {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, std::hash::Hash)]
 pub struct ProteinSequence {
     amino_acids: Vec<u8>,
+}
+
+impl Extendable for ProteinSequence {
+    fn empty() -> Self {
+        ProteinSequence { amino_acids: vec![] }
+    }
+
+    fn is_empty(&self) -> bool {
+        self.amino_acids.is_empty()
+    }
+
+    fn extend(&mut self, other: Self) -> () {
+        self.amino_acids.extend_from_slice(&other.amino_acids)
+    }
 }
 
 #[cfg(feature = "serde")]
@@ -150,6 +165,20 @@ pub type DnaSequenceAmbiguous = DnaSequence<NucleotideAmbiguous>;
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, std::hash::Hash)]
 pub struct DnaSequence<T: NucleotideLike> {
     dna: Vec<T>,
+}
+
+impl<N: NucleotideLike> Extendable for DnaSequence<N> {
+    fn empty() -> Self {
+        DnaSequence { dna: vec![] }
+    }
+
+    fn is_empty(&self) -> bool {
+        self.dna.is_empty()
+    }
+
+    fn extend(&mut self, other: Self) -> () {
+        self.dna.extend_from_slice(&other.dna)
+    }
 }
 
 #[cfg(feature = "serde")]

@@ -6,6 +6,9 @@ mod errors;
 mod nucleotide;
 pub mod trans_table; // needs to be public for bin/gen_table
 
+mod extendable;
+pub use extendable::*;
+
 mod fasta;
 pub use fasta::*;
 
