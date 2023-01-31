@@ -217,6 +217,11 @@ enum ParserState<T: FastaContent> {
     },
 }
 
+type ParseLineResult<T> = Result<
+    (ParserState<T>, Option<FastaRecord<T>>),
+    Located<FastaParseError<<T as FastaContent>::Err>>,
+>;
+
 impl<T: FastaContent> ParserState<T> {
     /// Pump the state machine and maybe emit a record, if this line completes a record, along with
     /// a new state
@@ -225,7 +230,7 @@ impl<T: FastaContent> ParserState<T> {
         settings: &FastaParseSettings,
         line: &str,
         line_number: usize,
-    ) -> Result<(Self, Option<FastaRecord<T>>), Located<FastaParseError<T::Err>>> {
+    ) -> ParseLineResult<T> {
         let new_header = try_parse_header(line);
         let (new_state, record) = match (self, new_header) {
             // start of file, and we have a header line => start a new record,
