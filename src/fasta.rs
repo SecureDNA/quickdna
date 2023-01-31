@@ -44,7 +44,7 @@ impl<T: Display> Display for FastaRecord<T> {
 impl<T: Display> Display for FastaFile<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for record in &self.records {
-            write!(f, "{}", record)?;
+            write!(f, "{record}")?;
         }
         Ok(())
     }
