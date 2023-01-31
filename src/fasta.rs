@@ -227,7 +227,7 @@ impl<T: FastaContent> ParserState<T> {
         line_number: usize,
     ) -> Result<(Self, Option<FastaRecord<T>>), Located<FastaParseError<T::Err>>> {
         let new_header = try_parse_header(line);
-        match (self, new_header) {
+        let (new_state, record) = match (self, new_header) {
             // start of file, and we have a header line => start a new record,
             // maybe emiting the preceding content as a headerless record depending
             // on parse settings
@@ -243,13 +243,13 @@ impl<T: FastaContent> ParserState<T> {
                     })
                 };
 
-                Ok((
+                (
                     Self::InHeader {
                         start_line_number: line_number,
                         header: new_header.to_string(),
                     },
                     record,
-                ))
+                )
             }
             // start of file, no header line yet => maybe store this line in content,
             // if we need to emit it later
@@ -258,7 +258,7 @@ impl<T: FastaContent> ParserState<T> {
                     // only bother to keep contents updated if we need to emit it
                     contents.extend(T::parse(line_number, line)?);
                 }
-                Ok((Self::StartOfFile { contents }, None))
+                (Self::StartOfFile { contents }, None)
             }
 
             // In header, and we have a new header => either concatenate the headers
@@ -273,15 +273,15 @@ impl<T: FastaContent> ParserState<T> {
                 if settings.concatenate_headers {
                     header.push('\n');
                     header.push_str(new_header);
-                    Ok((
+                    (
                         Self::InHeader {
                             start_line_number,
                             header,
                         },
                         None,
-                    ))
+                    )
                 } else {
-                    Ok((
+                    (
                         Self::InHeader {
                             start_line_number: line_number,
                             header: new_header.to_string(),
@@ -291,7 +291,7 @@ impl<T: FastaContent> ParserState<T> {
                             contents: T::empty(),
                             line_range: (start_line_number, line_number),
                         }),
-                    ))
+                    )
                 }
             }
             // in header and we don't have a new header => start of record content
@@ -301,14 +301,14 @@ impl<T: FastaContent> ParserState<T> {
                     header,
                 },
                 None,
-            ) => Ok((
+            ) => (
                 Self::InRecord {
                     start_line_number,
                     header,
                     contents: T::parse(line_number, line)?,
                 },
                 None,
-            )),
+            ),
 
             // in record and we have a new header => start of a new header
             (
@@ -318,7 +318,7 @@ impl<T: FastaContent> ParserState<T> {
                     contents,
                 },
                 Some(new_header),
-            ) => Ok((
+            ) => (
                 Self::InHeader {
                     start_line_number: line_number,
                     header: new_header.to_string(),
@@ -328,7 +328,7 @@ impl<T: FastaContent> ParserState<T> {
                     contents,
                     line_range: (start_line_number, line_number),
                 }),
-            )),
+            ),
             // in record and we don't have a new header => continue record
             (
                 ParserState::InRecord {
@@ -344,16 +344,17 @@ impl<T: FastaContent> ParserState<T> {
                     // have been a no-op anyways)
                     contents.extend(T::parse(line_number, line)?);
                 }
-                Ok((
+                (
                     Self::InRecord {
                         start_line_number,
                         header,
                         contents,
                     },
                     None,
-                ))
+                )
             }
-        }
+        };
+        Ok((new_state, record))
     }
 
     /// At the end of the file, we want to pump the state machine one more time to maybe
