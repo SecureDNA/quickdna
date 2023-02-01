@@ -69,17 +69,9 @@ macro_rules! impls {
     };
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, std::hash::Hash)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, std::hash::Hash)]
 pub struct ProteinSequence {
     amino_acids: Vec<u8>,
-}
-
-impl Default for ProteinSequence {
-    fn default() -> Self {
-        ProteinSequence {
-            amino_acids: vec![],
-        }
-    }
 }
 
 impl Extendable for ProteinSequence {
