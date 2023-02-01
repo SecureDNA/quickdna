@@ -74,14 +74,16 @@ pub struct ProteinSequence {
     amino_acids: Vec<u8>,
 }
 
-impl Extendable for ProteinSequence {
-    fn empty() -> Self {
+impl Default for ProteinSequence {
+    fn default() -> Self {
         ProteinSequence {
             amino_acids: vec![],
         }
     }
+}
 
-    fn is_empty(&self) -> bool {
+impl Extendable for ProteinSequence {
+    fn is_blank(&self) -> bool {
         self.amino_acids.is_empty()
     }
 
@@ -169,12 +171,14 @@ pub struct DnaSequence<T: NucleotideLike> {
     dna: Vec<T>,
 }
 
-impl<N: NucleotideLike> Extendable for DnaSequence<N> {
-    fn empty() -> Self {
+impl<N: NucleotideLike> Default for DnaSequence<N> {
+    fn default() -> Self {
         DnaSequence { dna: vec![] }
     }
+}
 
-    fn is_empty(&self) -> bool {
+impl<N: NucleotideLike> Extendable for DnaSequence<N> {
+    fn is_blank(&self) -> bool {
         self.dna.is_empty()
     }
 

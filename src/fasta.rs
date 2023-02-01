@@ -238,7 +238,7 @@ impl<T: FastaContent> ParserState<T> {
             // on parse settings
             (ParserState::StartOfFile { contents }, Some(new_header)) => {
                 // don't emit if the settings don't want it, or if the record would just be whitespace
-                let record = if settings.allow_preceding_comment || contents.is_empty() {
+                let record = if settings.allow_preceding_comment || contents.is_blank() {
                     None
                 } else {
                     Some(FastaRecord {
@@ -293,7 +293,7 @@ impl<T: FastaContent> ParserState<T> {
                         },
                         Some(FastaRecord {
                             header,
-                            contents: T::empty(),
+                            contents: T::default(),
                             line_range: (start_line_number, line_number),
                         }),
                     )
@@ -376,7 +376,7 @@ impl<T: FastaContent> ParserState<T> {
             // start of file => maybe emit contents as a headerless record, depending on settings
             ParserState::StartOfFile { contents } => {
                 // again, don't emit if settings don't want it or the record would just be whitespace
-                if settings.allow_preceding_comment || contents.is_empty() {
+                if settings.allow_preceding_comment || contents.is_blank() {
                     None
                 } else {
                     Some(FastaRecord {
@@ -393,7 +393,7 @@ impl<T: FastaContent> ParserState<T> {
                 header,
             } => Some(FastaRecord {
                 header,
-                contents: T::empty(),
+                contents: T::default(),
                 line_range: (start_line_number, eof_line_number),
             }),
 
@@ -439,7 +439,7 @@ impl<T: FastaContent> FastaParser<T> {
     ) -> Result<FastaFile<T>, Located<FastaParseError<T::Err>>> {
         let mut records: Vec<FastaRecord<T>> = vec![];
         let mut state = ParserState::StartOfFile {
-            contents: T::empty(),
+            contents: T::default(),
         };
 
         let mut line_number = 0;
