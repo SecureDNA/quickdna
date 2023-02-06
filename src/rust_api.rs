@@ -9,6 +9,7 @@ pub use crate::nucleotide::{
     Codon, CodonAmbiguous, Nucleotide, NucleotideAmbiguous, NucleotideLike,
 };
 pub use crate::trans_table::TranslationTable;
+use crate::Extendable;
 
 use crate::trans_table::reverse_complement;
 
@@ -68,9 +69,19 @@ macro_rules! impls {
     };
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, std::hash::Hash)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, std::hash::Hash)]
 pub struct ProteinSequence {
     amino_acids: Vec<u8>,
+}
+
+impl Extendable for ProteinSequence {
+    fn is_blank(&self) -> bool {
+        self.amino_acids.is_empty()
+    }
+
+    fn extend(&mut self, other: Self) {
+        self.amino_acids.extend_from_slice(&other.amino_acids)
+    }
 }
 
 #[cfg(feature = "serde")]
@@ -150,6 +161,22 @@ pub type DnaSequenceAmbiguous = DnaSequence<NucleotideAmbiguous>;
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, std::hash::Hash)]
 pub struct DnaSequence<T: NucleotideLike> {
     dna: Vec<T>,
+}
+
+impl<N: NucleotideLike> Default for DnaSequence<N> {
+    fn default() -> Self {
+        DnaSequence { dna: vec![] }
+    }
+}
+
+impl<N: NucleotideLike> Extendable for DnaSequence<N> {
+    fn is_blank(&self) -> bool {
+        self.dna.is_empty()
+    }
+
+    fn extend(&mut self, other: Self) {
+        self.dna.extend_from_slice(&other.dna)
+    }
 }
 
 #[cfg(feature = "serde")]

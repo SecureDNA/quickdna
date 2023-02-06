@@ -3,6 +3,15 @@ use std::array::TryFromSliceError;
 use thiserror::Error;
 
 #[derive(Debug, Clone, Error)]
+#[error("on line {line_number}: {error}")]
+pub struct Located<E> {
+    pub line_number: usize,
+
+    #[source]
+    pub error: E,
+}
+
+#[derive(Debug, Clone, Error)]
 pub enum TranslationError {
     #[error("non-ascii byte: {:x?}", .0)]
     NonAsciiByte(u8),
