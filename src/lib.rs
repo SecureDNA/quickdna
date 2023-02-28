@@ -3,6 +3,8 @@
 extern crate core;
 
 mod errors;
+pub use errors::*;
+
 mod nucleotide;
 pub mod trans_table; // needs to be public for bin/gen_table
 
