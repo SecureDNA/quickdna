@@ -9,7 +9,7 @@ use thiserror::Error;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use crate::errors::Located;
+pub use crate::errors::Located;
 use crate::Extendable;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
