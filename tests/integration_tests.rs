@@ -1,3 +1,6 @@
+// Copyright 2021-2023 SecureDNA Stiftung (SecureDNA Foundation) <license@securedna.org>
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use quickdna::{Nucleotide, NucleotideAmbiguous, NucleotideIter, NucleotideLike, TranslationTable};
 
 // The purpose of this is to ensure that it's possible to write code that's

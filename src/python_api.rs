@@ -1,4 +1,6 @@
 #![allow(clippy::borrow_deref_ref)] // TODO: broken clippy lint?
+                                    // Copyright 2021-2023 SecureDNA Stiftung (SecureDNA Foundation) <license@securedna.org>
+                                    // SPDX-License-Identifier: MIT OR Apache-2.0
 
 use pyo3::{exceptions::PyValueError, prelude::*, types::PyBytes};
 
