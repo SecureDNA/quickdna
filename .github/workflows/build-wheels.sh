@@ -1,4 +1,6 @@
-#!/bin/bash
+# Copyright 2021-2023 SecureDNA Stiftung (SecureDNA Foundation) <licensing@securedna.org>
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
 set -euxo pipefail nullglob
 
 for PY in cp38-cp38 cp39-cp39 cp310-cp310; do

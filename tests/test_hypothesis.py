@@ -1,3 +1,6 @@
+# Copyright 2021-2023 SecureDNA Stiftung (SecureDNA Foundation) <licensing@securedna.org>
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
 """
 These are conformance tests that ensure the output of quickdna matches biopython
 for randomly-generated strings of DNA.

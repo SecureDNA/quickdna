@@ -1,3 +1,6 @@
+// Copyright 2021-2023 SecureDNA Stiftung (SecureDNA Foundation) <licensing@securedna.org>
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! This binary is used to generate the src/tables.dat datafile.
 //! Should be run from the repository root.
 //! Translation table via Wikipedia.

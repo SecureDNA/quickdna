@@ -1,3 +1,6 @@
+// Copyright 2021-2023 SecureDNA Stiftung (SecureDNA Foundation) <licensing@securedna.org>
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 /// A trait used by the FASTA parser: `T: Extendable` is the type of the
 /// contents of the FASTA file (String or DnaSequence or ProteinSequence).
 /// This trait lets us generically concatenate parsed content lines.

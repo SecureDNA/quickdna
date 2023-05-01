@@ -9,6 +9,14 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  check-headers:
+    name: Ensure that SPDX headers are present
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v3
+      - run: GOBIN=/usr/local/bin/ go install github.com/google/addlicense@v1.1.1
+      - run: addlicense -ignore **/*.yaml -ignore **/*.yml -check .
   build:
     name: Build SecureDNA
     runs-on: ubuntu-latest
