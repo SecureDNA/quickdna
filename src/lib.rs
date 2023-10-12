@@ -19,6 +19,8 @@ pub use fasta::*;
 mod iter;
 pub use iter::*;
 
+pub mod permute;
+
 mod rust_api;
 pub use rust_api::*;
 
@@ -28,7 +30,7 @@ mod python_api;
 #[cfg(feature = "python-support")]
 pub use python_api::*;
 
-#[cfg(feature = "quickcheck")]
+#[cfg(any(feature = "quickcheck", test))]
 mod quickcheck;
 
 #[cfg(feature = "serde")]
