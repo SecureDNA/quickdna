@@ -435,6 +435,23 @@ impl CodonAmbiguous {
     }
 }
 
+impl From<Codon> for CodonAmbiguous {
+    #[inline(always)]
+    fn from(codon: Codon) -> Self {
+        Self(codon.0.map(Into::into))
+    }
+}
+
+impl TryFrom<CodonAmbiguous> for Codon {
+    type Error = TranslationError;
+
+    #[inline(always)]
+    fn try_from(codon: CodonAmbiguous) -> Result<Self, Self::Error> {
+        let [nuc0, nuc1, nuc2] = codon.0.map(TryInto::try_into);
+        Ok(Self([nuc0?, nuc1?, nuc2?]))
+    }
+}
+
 #[cfg(feature = "serde")]
 serde_utils::impl_stringlike!(Codon);
 
@@ -443,11 +460,11 @@ serde_utils::impl_stringlike!(CodonAmbiguous);
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[cfg(feature = "serde")]
     #[test]
     fn test_serde_json() {
-        use super::*;
-
         assert_eq!(
             serde_json::to_value(Nucleotide::A).unwrap(),
             serde_json::json!("A")
@@ -469,5 +486,25 @@ mod tests {
             .unwrap(),
             serde_json::json!("ABC")
         );
+    }
+
+    #[test]
+    fn concrete_codon_to_ambiguous_codon_conversion() {
+        let codon = Codon::from_str("CAT").unwrap();
+        let expected = CodonAmbiguous::from_str("CAT").unwrap();
+        assert_eq!(CodonAmbiguous::from(codon), expected);
+    }
+
+    #[test]
+    fn ambiguous_codon_to_concrete_codon_conversion() {
+        let amb_codon = CodonAmbiguous::from_str("CAT").unwrap();
+        let expected = Codon::from_str("CAT").unwrap();
+        assert_eq!(Codon::try_from(amb_codon).unwrap(), expected);
+    }
+
+    #[test]
+    fn ambiguous_codon_to_concrete_codon_conversion_failure() {
+        let amb_codon = CodonAmbiguous::from_str("BAT").unwrap();
+        assert!(Codon::try_from(amb_codon).is_err());
     }
 }
