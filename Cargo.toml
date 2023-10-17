@@ -33,7 +33,10 @@ default = ["python-support"]
 name = "all_windows"
 harness = false
 
-
 [[bench]]
 name = "expansions"
+harness = false
+
+[[bench]]
+name = "combo_hashing"
 harness = false

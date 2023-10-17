@@ -51,14 +51,16 @@ where
     }
 }
 
-struct LexicalMin<I1, I2> {
+// FIXME: stop making this pubic once it's pulled out or there aren't benches
+pub struct LexicalMin<I1, I2> {
     iter1: I1,
     order: Ordering,
     iter2: I2,
 }
 
 impl<I1, I2> LexicalMin<I1, I2> {
-    fn new(iter1: I1, iter2: I2) -> Self {
+    // FIXME: ditto
+    pub fn new(iter1: I1, iter2: I2) -> Self {
         Self {
             iter1,
             order: Ordering::Equal,
