@@ -1,7 +1,7 @@
 // Copyright 2021-2023 SecureDNA Stiftung (SecureDNA Foundation) <licensing@securedna.org>
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use quickdna::{
     expansions::Expansions, BaseSequence, DnaSequenceStrict, Nucleotide, NucleotideAmbiguous,
 };
@@ -90,9 +90,10 @@ fn semi_ambiguous_dna(dna_len: usize, num_ambiguities: usize) -> Vec<NucleotideA
 }
 
 pub fn criterion_benchmark(c: &mut Criterion) {
+    let num_windows = 1000;
     let num_ambiguities = 2;
     const WINDOW_LEN: usize = 42;
-    let windows: Vec<[_; WINDOW_LEN]> = (0..1000)
+    let windows: Vec<[_; WINDOW_LEN]> = (0..num_windows)
         .map(|_| {
             semi_ambiguous_dna(WINDOW_LEN, num_ambiguities)
                 .try_into()
@@ -100,33 +101,52 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         })
         .collect();
 
-    c.bench_function("Vec-based ambiguity expansions", |b| {
-        b.iter(|| {
-            for window in &windows {
-                for expansion in vec_based_expansions(*window) {
-                    black_box(expansion);
-                }
-            }
-        })
-    });
+    let num_windows_desc = format!("{num_windows} windows");
 
-    c.bench_function("Iter-based ambiguity expansions", |b| {
-        b.iter(|| {
-            for window in &windows {
-                for expansion in Expansions::new(window) {
-                    black_box(expansion);
+    let mut group = c.benchmark_group("Expansion window content");
+    group.throughput(Throughput::Elements(num_windows));
+    group.bench_with_input(
+        BenchmarkId::new("vec-based", &num_windows_desc),
+        &windows,
+        |b, windows| {
+            b.iter(|| {
+                for window in windows {
+                    for expansion in vec_based_expansions(*window) {
+                        black_box(expansion);
+                    }
                 }
-            }
-        })
-    });
+            })
+        },
+    );
+    group.bench_with_input(
+        BenchmarkId::new("iter-based", &num_windows_desc),
+        &windows,
+        |b, windows| {
+            b.iter(|| {
+                for window in windows {
+                    for expansion in Expansions::new(window) {
+                        black_box(expansion);
+                    }
+                }
+            })
+        },
+    );
+    group.finish();
 
-    c.bench_function("Iter-based number of expansions", |b| {
-        b.iter(|| {
-            for window in &windows {
-                black_box(Expansions::new(window).size_hint());
-            }
-        })
-    });
+    let mut group = c.benchmark_group("Expansion window size-hint");
+    group.throughput(Throughput::Elements(num_windows));
+    group.bench_with_input(
+        BenchmarkId::new("iter-based", &num_windows_desc),
+        &windows,
+        |b, windows| {
+            b.iter(|| {
+                for window in windows {
+                    black_box(Expansions::new(window).size_hint());
+                }
+            })
+        },
+    );
+    group.finish();
 }
 
 criterion_group!(benches, criterion_benchmark);
