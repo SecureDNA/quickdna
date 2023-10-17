@@ -7,6 +7,7 @@ use smallvec::SmallVec;
 
 use crate::{
     BaseSequence, DnaSequenceAmbiguous, DnaSequenceStrict, Nucleotide, NucleotideAmbiguous,
+    NucleotideLike,
 };
 
 /// Iterator of all unambiguous expansions of ambiguous DNA.
@@ -37,7 +38,7 @@ impl Expansions {
         let ambiguities = dna
             .iter()
             .enumerate()
-            .filter(|(_, nuc)| nuc.possibilities().len() > 1)
+            .filter(|(_, nuc)| nuc.bits().count_ones() > 1)
             .map(|(index, &nucleotide)| Ambiguity {
                 index,
                 digit: 0,
@@ -76,7 +77,7 @@ impl Iterator for Expansions {
         };
 
         for amb in self.ambiguities.iter_mut().rev() {
-            amb.digit = (amb.digit + 1) % (amb.nucleotide.possibilities().len() as u8);
+            amb.digit = (amb.digit + 1) % (amb.nucleotide.bits().count_ones() as u8);
             buf[amb.index] = amb.nucleotide.possibilities()[amb.digit as usize];
             if amb.digit > 0 {
                 return Some(Expansion(self.buf.clone()));
@@ -89,7 +90,7 @@ impl Iterator for Expansions {
         let size = (|| {
             let mut size: usize = 0;
             for amb in &self.ambiguities {
-                let num_digit_states = amb.nucleotide.possibilities().len();
+                let num_digit_states = amb.nucleotide.bits().count_ones() as usize;
                 let remaining = num_digit_states - (amb.digit as usize) - 1;
                 size = size.checked_mul(num_digit_states)?.checked_add(remaining)?;
             }
