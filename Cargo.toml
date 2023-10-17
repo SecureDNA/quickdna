@@ -31,3 +31,8 @@ default = ["python-support"]
 [[bench]]
 name = "all_windows"
 harness = false
+
+
+[[bench]]
+name = "expansions"
+harness = false

@@ -11,6 +11,8 @@ pub mod trans_table; // needs to be public for bin/gen_table
 mod extendable;
 pub use extendable::*;
 
+pub mod expansions;
+
 mod fasta;
 pub use fasta::*;
 

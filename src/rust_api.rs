@@ -14,6 +14,7 @@ pub use crate::nucleotide::{
 pub use crate::trans_table::TranslationTable;
 use crate::Extendable;
 
+use crate::expansions::Expansions;
 use crate::trans_table::reverse_complement;
 
 #[cfg(feature = "serde")]
@@ -334,6 +335,16 @@ impl<T: NucleotideLike> FromStr for DnaSequence<T> {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Self::try_from(s.as_bytes())
+    }
+}
+
+impl DnaSequence<NucleotideAmbiguous> {
+    /// Return all unambiguous expansions.
+    ///
+    /// Expansions are returned in lexicographic order based on the ordering of [`Nucleotide`]
+    /// (not currently alphabetical).
+    pub fn expansions(&self) -> Expansions {
+        Expansions::new(self.as_slice())
     }
 }
 
