@@ -14,6 +14,7 @@ pub use crate::nucleotide::{
 pub use crate::trans_table::TranslationTable;
 use crate::Extendable;
 
+use crate::canonical::Canonical;
 use crate::expansions::Expansions;
 use crate::trans_table::reverse_complement;
 
@@ -335,6 +336,16 @@ impl<T: NucleotideLike> FromStr for DnaSequence<T> {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Self::try_from(s.as_bytes())
+    }
+}
+
+impl DnaSequence<Nucleotide> {
+    /// Return canonical isomorphic DNA sequence.
+    ///
+    /// See [`Canonical`] for details.
+    pub fn canonical(&self) -> Self {
+        let canonical = Canonical::new(self.as_slice().iter().copied()).collect();
+        Self::new(canonical)
     }
 }
 
