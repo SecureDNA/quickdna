@@ -58,7 +58,7 @@ impl<I> ExactSizeIterator for Canonical<I> where
 ///
 /// This returns a sequence of [`Nucleotide`]s that is:
 /// * Isomorphic to the original sequence; that is, the bases can be remapped to convert between
-///   the original and forward-canonnical sequences. So `ATA` and `GAG` have the same
+///   the original and forward-canonical sequences. So `ATA` and `GAG` have the same
 ///   forward-canonical sequence but `TAA` and `GAG` do not.
 /// * Lexically "before" all other [`Nucleotide`] sequences that are isomorphic to it. Note that
 ///   (at the time of this writing) the order of [`Nucleotide`]s is
@@ -423,6 +423,10 @@ mod test {
             let canonical = dna.canonical();
             let canonical2 = canonical.canonical();
             canonical2 == canonical
+        }
+
+        fn canonicalization_is_unaffected_by_reverse_complement(dna: DnaSequenceStrict) -> bool {
+            dna.canonical() == dna.reverse_complement().canonical()
         }
 
         fn lexical_min_is_equivalent_to_vec_min(vec1: Vec<Nucleotide>, vec2: Vec<Nucleotide>) -> bool {

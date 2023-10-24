@@ -342,7 +342,31 @@ impl<T: NucleotideLike> FromStr for DnaSequence<T> {
 impl DnaSequence<Nucleotide> {
     /// Return canonical isomorphic DNA sequence.
     ///
+    /// This returns the lexical minimum of all sequences isomorphic to the original or its
+    /// reverse. In other words, two sequences have the same canonical sequence if and only if
+    /// they are isomorphic (or one is isomorphic to the reverse of the other).
     /// See [`Canonical`] for details.
+    ///
+    /// # Caveat
+    ///
+    /// We define "lexical minimum" in terms of the ordering of [`Nucleotide`] which is currently
+    ///  [`A`](Nucleotide::A) [`T`](Nucleotide::T) [`C`](Nucleotide::C) [`G`](Nucleotide::G),
+    /// _not_ alphabetical.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use quickdna::DnaSequenceStrict;
+    ///
+    /// let dna: DnaSequenceStrict = "CATTAG".parse().unwrap();
+    /// let expected: DnaSequenceStrict = "ATCCTG".parse().unwrap();
+    /// assert_eq!(dna.canonical(), expected);
+    ///
+    /// let dna: DnaSequenceStrict = "TAGACGTACGTAGTACGTTAGCTGAGCTGAGTACG".parse().unwrap();
+    /// // Reverse complement does not change the canonical sequence,
+    /// // because by definition its reverse is isomorphic to the original.
+    /// assert_eq!(dna.canonical(), dna.reverse_complement().canonical());
+    /// ```
     pub fn canonical(&self) -> Self {
         let canonical = Canonical::new(self.as_slice().iter().copied()).collect();
         Self::new(canonical)
