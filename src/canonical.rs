@@ -117,8 +117,15 @@ where
 
 impl<I: ExactSizeIterator<Item = Nucleotide>> ExactSizeIterator for ForwardCanonical<I> {}
 
-// Like an allocation-free variant of:
-// Vec::from_iter(iter1).min(iter2.collect()).into_iter()
+// Given two sequences, returns whichever one is lexically less than the other.
+// This is like an allocation-free equivalent of:
+//     Vec::from_iter(iter1).min(iter2.collect()).into_iter()
+// For example:
+//     let x = [2, 1, 3];
+//     let y = [2, 2, 2];
+//     let lmin = LexicalMin::new(x.iter(), y.iter());
+//     assert!(x < y);
+//     assert!(lmin.eq(x.iter())); // because x < y
 #[derive(Clone, Debug)]
 struct LexicalMin<I1, I2> {
     iter1: I1,
@@ -416,6 +423,12 @@ mod test {
             let canonical = dna.canonical();
             let canonical2 = canonical.canonical();
             canonical2 == canonical
+        }
+
+        fn lexical_min_is_equivalent_to_vec_min(vec1: Vec<Nucleotide>, vec2: Vec<Nucleotide>) -> bool {
+            let lmin = LexicalMin::new(vec1.iter(), vec2.iter());
+            let vmin = vec1.clone().min(vec2.clone());
+            lmin.eq(vmin.iter())
         }
     }
 }
