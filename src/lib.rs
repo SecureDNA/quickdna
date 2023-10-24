@@ -8,6 +8,8 @@ mod errors;
 mod nucleotide;
 pub mod trans_table; // needs to be public for bin/gen_table
 
+pub mod canonical;
+
 mod extendable;
 pub use extendable::*;
 
@@ -28,7 +30,7 @@ mod python_api;
 #[cfg(feature = "python-support")]
 pub use python_api::*;
 
-#[cfg(feature = "quickcheck")]
+#[cfg(any(feature = "quickcheck", test))]
 mod quickcheck;
 
 #[cfg(feature = "serde")]
