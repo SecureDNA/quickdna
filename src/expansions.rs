@@ -60,7 +60,7 @@ impl Expansions {
     pub fn empty() -> Self {
         // TODO: Possibly make this skip allocation by reusing Arc?
         let mut this = Self::new(&[]);
-        this.next();
+        this.next(); // `this` contains a single empty expansion; skip it
         this
     }
 }
