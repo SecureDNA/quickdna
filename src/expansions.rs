@@ -29,7 +29,7 @@ struct Ambiguity {
 }
 
 /// Unambiguous DNA expansion produced by [`Expansions`] iterator.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Expansion(Arc<[Nucleotide]>);
 
 impl Expansions {
@@ -55,6 +55,13 @@ impl Expansions {
             buf,
             began: false,
         }
+    }
+
+    pub fn empty() -> Self {
+        // TODO: Possibly make this skip allocation by reusing Arc?
+        let mut this = Self::new(&[]);
+        this.next();
+        this
     }
 }
 
@@ -97,6 +104,12 @@ impl Iterator for Expansions {
             size.checked_add(!self.began as usize)
         })();
         (size.unwrap_or(usize::MAX), size)
+    }
+}
+
+impl Default for Expansions {
+    fn default() -> Self {
+        Self::empty()
     }
 }
 
@@ -271,6 +284,13 @@ mod test {
             dna("ATCGGGCTA"),
         ];
         assert_eq!(expansions, expected);
+    }
+
+    #[test]
+    fn empty_expansions() {
+        let mut empty = Expansions::empty();
+        assert_eq!(empty.size_hint(), (0, Some(0)));
+        assert_eq!(empty.next(), None);
     }
 
     #[test]
