@@ -35,12 +35,10 @@ class BaseSequence:
         return self._seq
 
     @ty.overload
-    def __getitem__(self, __i: ty.SupportsIndex) -> int:
-        ...
+    def __getitem__(self, __i: ty.SupportsIndex) -> int: ...
 
     @ty.overload
-    def __getitem__(self: T, __s: slice) -> T:
-        ...
+    def __getitem__(self: T, __s: slice) -> T: ...
 
     def __getitem__(self, key):
         if isinstance(key, ty.SupportsIndex):

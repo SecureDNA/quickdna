@@ -311,9 +311,7 @@ impl<T: NucleotideLike> TryFrom<&[u8]> for DnaSequence<T> {
     type Error = TranslationError;
 
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        let mut vec = vec![];
-        vec.reserve(value.len());
-
+        let mut vec = Vec::with_capacity(value.len());
         for &b in value {
             if b != b' ' && b != b'\t' {
                 vec.push(T::try_from(b)?);
