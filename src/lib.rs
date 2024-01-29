@@ -27,9 +27,6 @@ pub use rust_api::*;
 #[cfg(feature = "python-support")]
 mod python_api;
 
-#[cfg(feature = "python-support")]
-pub use python_api::*;
-
 #[cfg(any(feature = "quickcheck", test))]
 mod quickcheck;
 
