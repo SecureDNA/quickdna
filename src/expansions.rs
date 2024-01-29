@@ -133,6 +133,24 @@ impl Expansion {
     }
 }
 
+impl From<DnaSequenceStrict> for Expansion {
+    fn from(dna: DnaSequenceStrict) -> Self {
+        dna.as_slice().into()
+    }
+}
+
+impl From<&[Nucleotide]> for Expansion {
+    fn from(dna: &[Nucleotide]) -> Self {
+        Self(Arc::from(dna))
+    }
+}
+
+impl From<Arc<[Nucleotide]>> for Expansion {
+    fn from(dna: Arc<[Nucleotide]>) -> Self {
+        Self(dna)
+    }
+}
+
 impl From<Expansion> for DnaSequenceStrict {
     fn from(expansion: Expansion) -> Self {
         expansion.to_dna()
