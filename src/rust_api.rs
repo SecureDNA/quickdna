@@ -337,6 +337,12 @@ impl<T: NucleotideLike> FromStr for DnaSequence<T> {
     }
 }
 
+impl<T: NucleotideLike> AsRef<[T]> for DnaSequence<T> {
+    fn as_ref(&self) -> &[T] {
+        self.as_slice()
+    }
+}
+
 impl DnaSequence<Nucleotide> {
     /// Return canonical isomorphic DNA sequence.
     ///
