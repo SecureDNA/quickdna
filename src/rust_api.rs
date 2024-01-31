@@ -337,6 +337,12 @@ impl<T: NucleotideLike> FromStr for DnaSequence<T> {
     }
 }
 
+impl<T: NucleotideLike> AsRef<[T]> for DnaSequence<T> {
+    fn as_ref(&self) -> &[T] {
+        self.as_slice()
+    }
+}
+
 impl DnaSequence<Nucleotide> {
     /// Return canonical isomorphic DNA sequence.
     ///
@@ -776,6 +782,13 @@ mod tests {
         protein("angtnattag ");
         protein(" angtnattag ");
         protein(" an  gtnattag \t");
+    }
+
+    #[test]
+    fn test_as_ref() {
+        let sequence = dna("ac");
+        let nucleotides: &[NucleotideAmbiguous] = sequence.as_ref();
+        assert!(nucleotides == &[NucleotideAmbiguous::A, NucleotideAmbiguous::C]);
     }
 
     #[cfg(feature = "serde")]
