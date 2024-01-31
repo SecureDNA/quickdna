@@ -784,6 +784,13 @@ mod tests {
         protein(" an  gtnattag \t");
     }
 
+    #[test]
+    fn test_as_ref() {
+        let sequence = dna("ac");
+        let nucleotides: &[NucleotideAmbiguous] = sequence.as_ref();
+        assert!(nucleotides == &[NucleotideAmbiguous::A, NucleotideAmbiguous::C]);
+    }
+
     #[cfg(feature = "serde")]
     #[test]
     fn test_serde_json() {
