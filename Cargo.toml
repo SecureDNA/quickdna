@@ -1,6 +1,6 @@
 [package]
 name = "quickdna"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2021"
 authors = ["SecureDNA Dev Team <dev@securedna.org"]
 license = "MIT OR Apache-2.0"
