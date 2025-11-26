@@ -45,6 +45,10 @@ jobs:
         with:
           command: clippy
           args: -- -D warnings
+      - uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --tests -- -D warnings
   fmt:
     name: Rustfmt
     runs-on: ubuntu-latest
