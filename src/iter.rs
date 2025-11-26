@@ -499,4 +499,14 @@ mod test {
         let expected = [[T, C, C].into(), [A, A, T].into()];
         assert_eq!(rev_codons, expected);
     }
+
+    #[test]
+    fn can_compile_iter_of_generic_nucleotide_references() {
+        // The previous version of `NucleotideIter` worked with iterators of `Nucleotide`,
+        // `&Nucleotide`, `NucleotideAmbiguous`, `&NucleotideAmbiguous` and `impl NucleotideLike`,
+        // but NOT `&impl NucleotideLike`.
+        fn _do_stuff(dna: &[impl NucleotideLike]) {
+            dna.iter().reverse_complement(); // no-op; just checking that it compiles
+        }
+    }
 }
