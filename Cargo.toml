@@ -8,7 +8,7 @@ publish = false
 
 [dependencies]
 lazy_static = "1.4.0"
-thiserror = "1.0.30"
+thiserror = "2.0.17"
 smallvec = "1.8.0"
 pyo3 = {version = "0.27.1", features = ["extension-module"], optional = true}
 quickcheck = {version = "1.0.3", optional = true}
