@@ -53,7 +53,7 @@ pub enum NucleotideAmbiguous {
 }
 
 pub trait NucleotideLike:
-    Copy + Eq + Into<u8> + Into<char> + TryFrom<u8, Error = TranslationError>
+    Copy + Eq + AsRef<Self> + Into<u8> + Into<char> + TryFrom<u8, Error = TranslationError>
 {
     type Codon: From<[Self; 3]> + Into<[Self; 3]>;
 
@@ -238,6 +238,18 @@ impl NucleotideLike for NucleotideAmbiguous {
 
     fn is_ambiguous(self) -> bool {
         (self as usize).count_ones() > 1
+    }
+}
+
+impl AsRef<Self> for Nucleotide {
+    fn as_ref(&self) -> &Self {
+        self
+    }
+}
+
+impl AsRef<Self> for NucleotideAmbiguous {
+    fn as_ref(&self) -> &Self {
+        self
     }
 }
 

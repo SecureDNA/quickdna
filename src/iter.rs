@@ -1,48 +1,11 @@
 // Copyright 2021-2024 SecureDNA Stiftung (SecureDNA Foundation) <licensing@securedna.org>
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
+use std::marker::PhantomData;
+
 use smallvec::SmallVec;
 
-use crate::{Nucleotide, NucleotideAmbiguous, NucleotideLike};
-
-/// Helper trait to support iters regardless of whether their items are by-ref or by-value
-pub trait ToNucleotideLike
-where
-    // It's much easier for the compiler to reason about chained NucleotideIters
-    // if we explicitly state that ToNucleotideLike is idempotent.
-    Self::NucleotideType: ToNucleotideLike<NucleotideType = Self::NucleotideType>,
-{
-    type NucleotideType: NucleotideLike + ToNucleotideLike;
-
-    fn to_nucleotide_like(self) -> Self::NucleotideType;
-}
-
-impl<N: NucleotideLike> ToNucleotideLike for N {
-    type NucleotideType = N;
-
-    fn to_nucleotide_like(self) -> N {
-        self
-    }
-}
-
-// Sadly, without specialization we can't get this to work with arbitrary
-// &T where T: NucleotideLike but that shouldn't be necessary in practice.
-
-impl ToNucleotideLike for &Nucleotide {
-    type NucleotideType = Nucleotide;
-
-    fn to_nucleotide_like(self) -> Nucleotide {
-        *self
-    }
-}
-
-impl ToNucleotideLike for &NucleotideAmbiguous {
-    type NucleotideType = NucleotideAmbiguous;
-
-    fn to_nucleotide_like(self) -> NucleotideAmbiguous {
-        *self
-    }
-}
+use crate::NucleotideLike;
 
 /// Extension trait for nucleotide iterators
 pub trait NucleotideIter: Iterator + Sized {
@@ -109,9 +72,34 @@ pub trait NucleotideIter: Iterator + Sized {
     /// let frames = dna[..2].iter().all_reading_frames();
     /// assert!(frames.is_empty());
     /// ```
-    fn all_reading_frames(self) -> SmallVec<[ForwardOrRcCodons<Self>; 6]>
+    fn all_reading_frames<N>(self) -> SmallVec<[ForwardOrRcCodons<N, Self>; 6]>
     where
-        Self: Clone + DoubleEndedIterator + ExactSizeIterator;
+        N: NucleotideLike,
+        Self: Clone + DoubleEndedIterator<Item: AsRef<N>> + ExactSizeIterator,
+    {
+        let iter1 = self;
+        let mut iter2 = iter1.clone();
+        iter2.next();
+        let mut iter3 = iter2.clone();
+        iter3.next();
+
+        let iter1_rc = iter1.clone().reverse_complement();
+        let mut iter2_rc = iter1_rc.clone();
+        iter2_rc.next();
+        let mut iter3_rc = iter2_rc.clone();
+        iter3_rc.next();
+
+        let mut frames = SmallVec::from([
+            ForwardOrRcCodons::Forward(iter1.codons()),
+            ForwardOrRcCodons::Forward(iter2.codons()),
+            ForwardOrRcCodons::Forward(iter3.codons()),
+            ForwardOrRcCodons::Rc(iter1_rc.codons()),
+            ForwardOrRcCodons::Rc(iter2_rc.codons()),
+            ForwardOrRcCodons::Rc(iter3_rc.codons()),
+        ]);
+        frames.retain(|frame| frame.len() > 0);
+        frames
+    }
 
     /// Returns iterator of codons for the first reading frame of this nucleotide sequence.
     /// If the number of nucleotides isn't divisible by 3, excess nucleotides are silently
@@ -134,7 +122,16 @@ pub trait NucleotideIter: Iterator + Sized {
     ///
     /// assert!(dna.iter().codons().eq(dna.iter().self_reading_frames().remove(0)));
     /// ```
-    fn codons(self) -> Codons<Self>;
+    fn codons<N>(self) -> Codons<N, Self>
+    where
+        N: NucleotideLike,
+        Self: Iterator<Item: AsRef<N>>,
+    {
+        Codons {
+            nucleotide_type: PhantomData,
+            inner: self,
+        }
+    }
 
     /// Returns iterator of complementary nucleotides.
     ///
@@ -148,7 +145,16 @@ pub trait NucleotideIter: Iterator + Sized {
     ///
     /// assert!(dna.iter().complement().eq([G, C, T, A]));
     /// ```
-    fn complement(self) -> Complement<Self>;
+    fn complement<N>(self) -> Complement<N, Self>
+    where
+        N: NucleotideLike,
+        Self: Iterator<Item: AsRef<N>>,
+    {
+        Complement {
+            nucleotide_type: PhantomData,
+            inner: self,
+        }
+    }
 
     /// Returns iterator of reverse complement of contained nucleotides.
     ///
@@ -162,9 +168,13 @@ pub trait NucleotideIter: Iterator + Sized {
     ///
     /// assert!(dna.iter().reverse_complement().eq([A, T, C, G]));
     /// ```
-    fn reverse_complement(self) -> Complement<std::iter::Rev<Self>>
+    fn reverse_complement<N>(self) -> Complement<N, std::iter::Rev<Self>>
     where
-        Self: DoubleEndedIterator;
+        N: NucleotideLike,
+        Self: DoubleEndedIterator<Item: AsRef<N>>,
+    {
+        self.rev().complement()
+    }
 
     /// Returns up to 3 non-empty codon iterators for reading frames.
     ///
@@ -208,9 +218,20 @@ pub trait NucleotideIter: Iterator + Sized {
     /// let frames = dna[..2].iter().self_reading_frames();
     /// assert!(frames.is_empty());
     /// ```
-    fn self_reading_frames(self) -> SmallVec<[Codons<Self>; 3]>
+    fn self_reading_frames<N>(self) -> SmallVec<[Codons<N, Self>; 3]>
     where
-        Self: Clone + ExactSizeIterator;
+        N: NucleotideLike,
+        Self: Clone + ExactSizeIterator<Item: AsRef<N>>,
+    {
+        let iter1 = self;
+        let mut iter2 = iter1.clone();
+        iter2.next();
+        let mut iter3 = iter2.clone();
+        iter3.next();
+        let mut frames = SmallVec::from([iter1.codons(), iter2.codons(), iter3.codons()]);
+        frames.retain(|frame| frame.len() > 0);
+        frames
+    }
 
     /// Trims excess nucleotides off iterator end so it aligns with a codon boundary.
     ///
@@ -231,7 +252,12 @@ pub trait NucleotideIter: Iterator + Sized {
     /// ```
     fn trim_to_codon(&mut self)
     where
-        Self: DoubleEndedIterator + ExactSizeIterator;
+        Self: DoubleEndedIterator + ExactSizeIterator,
+    {
+        for _ in 0..(self.len() % 3) {
+            self.next_back();
+        }
+    }
 
     /// Trims excess nucleotides off iterator end so it aligns with a codon boundary.
     ///
@@ -256,130 +282,63 @@ pub trait NucleotideIter: Iterator + Sized {
     }
 }
 
-impl<N, I> NucleotideIter for I
-where
-    N: ToNucleotideLike,
-    I: Iterator<Item = N>,
-{
-    fn all_reading_frames(self) -> SmallVec<[ForwardOrRcCodons<Self>; 6]>
-    where
-        Self: Clone + DoubleEndedIterator + ExactSizeIterator,
-    {
-        let iter1 = self;
-        let mut iter2 = iter1.clone();
-        iter2.next();
-        let mut iter3 = iter2.clone();
-        iter3.next();
-
-        let iter1_rc = iter1.clone().reverse_complement();
-        let mut iter2_rc = iter1_rc.clone();
-        iter2_rc.next();
-        let mut iter3_rc = iter2_rc.clone();
-        iter3_rc.next();
-
-        let mut frames = SmallVec::from([
-            ForwardOrRcCodons::Forward(iter1.codons()),
-            ForwardOrRcCodons::Forward(iter2.codons()),
-            ForwardOrRcCodons::Forward(iter3.codons()),
-            ForwardOrRcCodons::Rc(iter1_rc.codons()),
-            ForwardOrRcCodons::Rc(iter2_rc.codons()),
-            ForwardOrRcCodons::Rc(iter3_rc.codons()),
-        ]);
-        frames.retain(|frame| frame.len() > 0);
-        frames
-    }
-
-    fn codons(self) -> Codons<Self> {
-        Codons(self)
-    }
-
-    fn complement(self) -> Complement<Self> {
-        Complement(self)
-    }
-
-    fn reverse_complement(self) -> Complement<std::iter::Rev<Self>>
-    where
-        Self: DoubleEndedIterator,
-    {
-        self.rev().complement()
-    }
-
-    fn self_reading_frames(self) -> SmallVec<[Codons<Self>; 3]>
-    where
-        Self: Clone + ExactSizeIterator,
-    {
-        let iter1 = self;
-        let mut iter2 = iter1.clone();
-        iter2.next();
-        let mut iter3 = iter2.clone();
-        iter3.next();
-        let mut frames = SmallVec::from([iter1.codons(), iter2.codons(), iter3.codons()]);
-        frames.retain(|frame| frame.len() > 0);
-        frames
-    }
-
-    fn trim_to_codon(&mut self)
-    where
-        Self: DoubleEndedIterator + ExactSizeIterator,
-    {
-        for _ in 0..(self.len() % 3) {
-            self.next_back();
-        }
-    }
-}
+impl<I: Iterator> NucleotideIter for I {}
 
 /// Adapter yielding codons of the contained iterator.
 ///
 /// This `struct` is created by the [`codons`](NucleotideIter::codons)
 /// method on [`NucleotideIter`]. See its documentation for more.
 #[derive(Clone, Debug)]
-pub struct Codons<I>(I);
+pub struct Codons<N, I> {
+    nucleotide_type: PhantomData<N>,
+    inner: I,
+}
 
-impl<N, I> Iterator for Codons<I>
+impl<N, I> Iterator for Codons<N, I>
 where
-    N: ToNucleotideLike,
-    I: Iterator<Item = N>,
+    N: NucleotideLike,
+    I: Iterator<Item: AsRef<N>>,
 {
-    type Item = <N::NucleotideType as NucleotideLike>::Codon;
+    type Item = N::Codon;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match (self.0.next(), self.0.next(), self.0.next()) {
-            (Some(n1), Some(n2), Some(n3)) => {
-                Some([n1, n2, n3].map(|n| n.to_nucleotide_like()).into())
-            }
+        match (self.inner.next(), self.inner.next(), self.inner.next()) {
+            (Some(n1), Some(n2), Some(n3)) => Some([n1, n2, n3].map(|n| *n.as_ref()).into()),
             _ => None,
         }
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let (min, max) = self.0.size_hint();
+        let (min, max) = self.inner.size_hint();
         (min / 3, max.map(|m| m / 3))
     }
 }
 
-impl<N, I> DoubleEndedIterator for Codons<I>
+impl<N, I> DoubleEndedIterator for Codons<N, I>
 where
-    N: ToNucleotideLike,
-    I: DoubleEndedIterator<Item = N> + ExactSizeIterator,
+    N: NucleotideLike,
+    I: DoubleEndedIterator<Item: AsRef<N>> + ExactSizeIterator,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
-        self.0.trim_to_codon();
-        match (self.0.next_back(), self.0.next_back(), self.0.next_back()) {
-            (Some(n3), Some(n2), Some(n1)) => {
-                Some([n1, n2, n3].map(|n| n.to_nucleotide_like()).into())
-            }
+        self.inner.trim_to_codon();
+        match (
+            self.inner.next_back(),
+            self.inner.next_back(),
+            self.inner.next_back(),
+        ) {
+            (Some(n3), Some(n2), Some(n1)) => Some([n1, n2, n3].map(|n| *n.as_ref()).into()),
             _ => None,
         }
     }
 }
 
-impl<I> ExactSizeIterator for Codons<I>
+impl<N, I> ExactSizeIterator for Codons<N, I>
 where
     Self: Iterator,
     I: ExactSizeIterator,
 {
     fn len(&self) -> usize {
-        self.0.len() / 3
+        self.inner.len() / 3
     }
 }
 
@@ -388,43 +347,44 @@ where
 /// This `struct` is created by the [`complement`](NucleotideIter::complement)
 /// method on [`NucleotideIter`]. See its documentation for more.
 #[derive(Clone, Debug)]
-pub struct Complement<I>(I);
+pub struct Complement<N, I> {
+    nucleotide_type: PhantomData<N>,
+    inner: I,
+}
 
-impl<N, I> Iterator for Complement<I>
+impl<N, I> Iterator for Complement<N, I>
 where
-    N: ToNucleotideLike,
-    I: Iterator<Item = N>,
+    N: NucleotideLike,
+    I: Iterator<Item: AsRef<N>>,
 {
-    type Item = N::NucleotideType;
+    type Item = N;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.0.next().map(|n| n.to_nucleotide_like().complement())
+        self.inner.next().map(|n| n.as_ref().complement())
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        self.0.size_hint()
+        self.inner.size_hint()
     }
 }
 
-impl<N, I> DoubleEndedIterator for Complement<I>
+impl<N, I> DoubleEndedIterator for Complement<N, I>
 where
-    N: ToNucleotideLike,
-    I: DoubleEndedIterator<Item = N>,
+    N: NucleotideLike,
+    I: DoubleEndedIterator<Item: AsRef<N>>,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
-        self.0
-            .next_back()
-            .map(|n| n.to_nucleotide_like().complement())
+        self.inner.next_back().map(|n| n.as_ref().complement())
     }
 }
 
-impl<I> ExactSizeIterator for Complement<I>
+impl<N, I> ExactSizeIterator for Complement<N, I>
 where
     Self: Iterator,
     I: ExactSizeIterator,
 {
     fn len(&self) -> usize {
-        self.0.len()
+        self.inner.len()
     }
 }
 
@@ -433,17 +393,17 @@ where
 /// This `struct` is created by the [`all_reading_frames`](NucleotideIter::all_reading_frames)
 /// method on [`NucleotideIter`]. See its documentation for more.
 #[derive(Clone, Debug)]
-pub enum ForwardOrRcCodons<I> {
-    Forward(Codons<I>),
-    Rc(Codons<Complement<std::iter::Rev<I>>>),
+pub enum ForwardOrRcCodons<N, I> {
+    Forward(Codons<N, I>),
+    Rc(Codons<N, Complement<N, std::iter::Rev<I>>>),
 }
 
-impl<N, I> Iterator for ForwardOrRcCodons<I>
+impl<N, I> Iterator for ForwardOrRcCodons<N, I>
 where
-    N: ToNucleotideLike,
-    I: DoubleEndedIterator<Item = N>,
+    N: NucleotideLike,
+    I: DoubleEndedIterator<Item: AsRef<N>>,
 {
-    type Item = <N::NucleotideType as NucleotideLike>::Codon;
+    type Item = N::Codon;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
@@ -460,10 +420,10 @@ where
     }
 }
 
-impl<N, I> DoubleEndedIterator for ForwardOrRcCodons<I>
+impl<N, I> DoubleEndedIterator for ForwardOrRcCodons<N, I>
 where
-    N: ToNucleotideLike,
-    I: DoubleEndedIterator<Item = N> + ExactSizeIterator,
+    N: NucleotideLike,
+    I: DoubleEndedIterator<Item: AsRef<N>> + ExactSizeIterator,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
         match self {
@@ -473,11 +433,11 @@ where
     }
 }
 
-impl<N, I> ExactSizeIterator for ForwardOrRcCodons<I>
+impl<N, I> ExactSizeIterator for ForwardOrRcCodons<N, I>
 where
     Self: Iterator,
-    N: ToNucleotideLike,
-    I: DoubleEndedIterator<Item = N> + ExactSizeIterator,
+    N: NucleotideLike,
+    I: DoubleEndedIterator<Item: AsRef<N>> + ExactSizeIterator,
 {
     fn len(&self) -> usize {
         match self {
@@ -493,10 +453,20 @@ mod test {
 
     #[test]
     fn test_reverse_codons() {
-        use Nucleotide::*;
+        use crate::Nucleotide::*;
         let dna = [A, A, T, T, C, C, G, G];
         let rev_codons: Vec<_> = dna.iter().codons().rev().collect();
         let expected = [[T, C, C].into(), [A, A, T].into()];
         assert_eq!(rev_codons, expected);
+    }
+
+    #[test]
+    fn can_compile_iter_of_generic_nucleotide_references() {
+        // The previous version of `NucleotideIter` worked with iterators of `Nucleotide`,
+        // `&Nucleotide`, `NucleotideAmbiguous`, `&NucleotideAmbiguous` and `impl NucleotideLike`,
+        // but NOT `&impl NucleotideLike`.
+        fn _do_stuff(dna: &[impl NucleotideLike]) {
+            dna.iter().reverse_complement(); // no-op; just checking that it compiles
+        }
     }
 }
