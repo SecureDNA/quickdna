@@ -133,14 +133,21 @@ impl TryFrom<&[u8]> for ProteinSequence {
     type Error = TranslationError;
 
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        if value.is_ascii() {
-            let mut vec = value.to_vec();
-            vec.retain(|c| *c != b' ' && *c != b'\t');
-            vec.make_ascii_uppercase();
-            Ok(Self { amino_acids: vec })
+        let is_bad_aa = |&&c: &&u8| match c {
+            b'*' | b' ' | b'\t' => false,
+            c => !c.is_ascii_alphabetic(),
+        };
+        if let Some(bad_aa) = value.iter().find(is_bad_aa) {
+            if bad_aa.is_ascii() {
+                Err(TranslationError::BadAminoAcid(char::from(*bad_aa)))
+            } else {
+                Err(TranslationError::NonAsciiByte(*bad_aa))
+            }
         } else {
-            let first_non_ascii = *value.iter().find(|b| !b.is_ascii()).unwrap();
-            Err(TranslationError::NonAsciiByte(first_non_ascii))
+            let mut vec = value.to_vec();
+            vec.make_ascii_uppercase();
+            vec.retain(|c| *c != b' ' && *c != b'\t');
+            Ok(Self { amino_acids: vec })
         }
     }
 }
