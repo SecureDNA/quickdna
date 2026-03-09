@@ -769,19 +769,21 @@ mod tests {
     }
 
     #[test]
-    fn test_empty_spaces() {
-        // this test will unwrap() if it cannot parse the DNA
-        dna("gcantacctaangtnattag ");
-        dna("  gcantac\tctaangtnattag ");
-        dna(" gca ntac ctaangtnattag \t");
+    fn test_empty_spaces_are_stripped() {
+        let expected = dna("gcantacctaangtnattag");
+        assert_eq!(dna("gcantacctaangtnattag "), expected);
+        assert_eq!(dna("  gcantac\tctaangtnattag "), expected);
+        assert_eq!(dna(" gca ntac ctaangtnattag \t"), expected);
 
-        dna_strict("gcactacctaacgtcattag ");
-        dna_strict("  gcactac\tctaacgtcattag ");
-        dna_strict(" gca ctac ctaacgtcattag \t");
+        let expected = dna_strict("gcactacctaacgtcattag");
+        assert_eq!(dna_strict("gcactacctaacgtcattag "), expected);
+        assert_eq!(dna_strict("  gcactac\tctaacgtcattag "), expected);
+        assert_eq!(dna_strict(" gca ctac ctaacgtcattag \t"), expected);
 
-        protein("angtnattag ");
-        protein(" angtnattag ");
-        protein(" an  gtnattag \t");
+        let expected = protein("angtnattag");
+        assert_eq!(protein("angtnattag "), expected);
+        assert_eq!(protein(" angtnattag "), expected);
+        assert_eq!(protein(" an  gtnattag \t"), expected);
     }
 
     #[test]
