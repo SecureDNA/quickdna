@@ -1340,6 +1340,19 @@ mod tests {
     }
 
     #[test]
+    fn test_protein_invalid_fasta() {
+        // Note the missing newline between records.
+        assert_parse_err!(
+            ">Virus1\nAAAA\nAAAA>Virus2\nCCCC\nCCCC\n",
+            FastaParser::<ProteinSequence>::default(),
+            Located {
+                line_number: 3,
+                error: FastaParseError::ParseError(TranslationError::BadAminoAcid('>'))
+            }
+        );
+    }
+
+    #[test]
     fn test_to_string() {
         let parser = FastaParser::<DnaSequence<Nucleotide>>::default();
         let string = ">Virus1\nAC\nT\n>Empty\n\n>Virus2\n>with many\n>comment lines\nC  AT";
