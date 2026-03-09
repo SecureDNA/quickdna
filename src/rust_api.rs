@@ -135,6 +135,7 @@ impl TryFrom<&[u8]> for ProteinSequence {
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
         if value.is_ascii() {
             let mut vec = value.to_vec();
+            vec.retain(|c| *c != b' ' && *c != b'\t');
             vec.make_ascii_uppercase();
             Ok(Self { amino_acids: vec })
         } else {
