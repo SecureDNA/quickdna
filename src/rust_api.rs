@@ -133,13 +133,18 @@ impl TryFrom<&[u8]> for ProteinSequence {
     type Error = TranslationError;
 
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        if value.is_ascii() {
+        let is_seq_char = |c| matches!(c, b'*' | b' ' | b'\t') || c.is_ascii_alphabetic();
+        if let Some(&bad_aa) = value.iter().find(|&&c| !is_seq_char(c)) {
+            if bad_aa.is_ascii() {
+                Err(TranslationError::BadAminoAcid(char::from(bad_aa)))
+            } else {
+                Err(TranslationError::NonAsciiByte(bad_aa))
+            }
+        } else {
             let mut vec = value.to_vec();
             vec.make_ascii_uppercase();
+            vec.retain(|c| *c != b' ' && *c != b'\t');
             Ok(Self { amino_acids: vec })
-        } else {
-            let first_non_ascii = *value.iter().find(|b| !b.is_ascii()).unwrap();
-            Err(TranslationError::NonAsciiByte(first_non_ascii))
         }
     }
 }
@@ -769,19 +774,21 @@ mod tests {
     }
 
     #[test]
-    fn test_empty_spaces() {
-        // this test will unwrap() if it cannot parse the DNA
-        dna("gcantacctaangtnattag ");
-        dna("  gcantac\tctaangtnattag ");
-        dna(" gca ntac ctaangtnattag \t");
+    fn test_empty_spaces_are_stripped() {
+        let expected = dna("gcantacctaangtnattag");
+        assert_eq!(dna("gcantacctaangtnattag "), expected);
+        assert_eq!(dna("  gcantac\tctaangtnattag "), expected);
+        assert_eq!(dna(" gca ntac ctaangtnattag \t"), expected);
 
-        dna_strict("gcactacctaacgtcattag ");
-        dna_strict("  gcactac\tctaacgtcattag ");
-        dna_strict(" gca ctac ctaacgtcattag \t");
+        let expected = dna_strict("gcactacctaacgtcattag");
+        assert_eq!(dna_strict("gcactacctaacgtcattag "), expected);
+        assert_eq!(dna_strict("  gcactac\tctaacgtcattag "), expected);
+        assert_eq!(dna_strict(" gca ctac ctaacgtcattag \t"), expected);
 
-        protein("angtnattag ");
-        protein(" angtnattag ");
-        protein(" an  gtnattag \t");
+        let expected = protein("angtnattag");
+        assert_eq!(protein("angtnattag "), expected);
+        assert_eq!(protein(" angtnattag "), expected);
+        assert_eq!(protein(" an  gtnattag \t"), expected);
     }
 
     #[test]
